@@ -314,13 +314,13 @@ body{background:#0B0C0E;overflow:hidden}
               <button class="pri" style="flex: 1; min-width: 0; text-align: center; border-radius: 10px 0 0 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis" onClick="{{addToEdit}}">Add to “{{projName}}”</button>
               <button class="pri" style="flex: none; width: 36px; border-radius: 0 10px 10px 0; padding: 0" onClick="{{toggleAddMenu}}" aria-label="Add to another project" aria-haspopup="true" aria-expanded="{{addMenuOpen}}">▾</button>
               <sc-if value="{{addMenu}}" hint-placeholder-val="{{false}}">
-                <div style="position: absolute; z-index: 8; width: 280px; box-sizing: border-box; background: #212327; border: 1px solid #50545A; border-radius: 12px; padding: 6px; display: flex; flex-direction: column; gap: 2px; box-shadow: 0 16px 40px rgba(0,0,0,.55); right: 0; bottom: 44px">
+                <div style="position: absolute; z-index: 8; width: 320px; box-sizing: border-box; background: #212327; border: 1px solid #50545A; border-radius: 12px; padding: 6px; display: flex; flex-direction: column; gap: 2px; box-shadow: 0 16px 40px rgba(0,0,0,.55); right: 0; bottom: 44px">
                   <span class="muted" style="font-size: 11px; padding: 6px 10px 4px">Add {{vidTitle}} to</span>
                   <sc-for list="{{addTargets}}" as="o" hint-placeholder-count="2">
                     <button style="{{o.style}}" onClick="{{o.add}}"><span>{{o.name}}</span><span style="color: #7AA578; font-size: 11px">{{o.mark}}</span></button>
                   </sc-for>
                   <div style="height: 1px; background: #34373B; margin: 4px 0"></div>
-                  <button style="{{projItemStyle}}" onClick="{{newProjectWith}}"><span>+ New project with this video</span></button>
+                  <button style="{{projItemStyle}}" onClick="{{newProjectWith}}"><span>+ Open in a new project</span></button>
                 </div>
               </sc-if>
             </div>
@@ -333,13 +333,13 @@ body{background:#0B0C0E;overflow:hidden}
               <span style="position: relative; display: flex">
                 <button class="lnk" style="font-size: 12px" onClick="{{toggleAddMenu}}" aria-haspopup="true" aria-expanded="{{addMenuOpen}}">Also add to ▾</button>
                 <sc-if value="{{addMenu}}" hint-placeholder-val="{{false}}">
-                  <div style="position: absolute; z-index: 8; width: 280px; box-sizing: border-box; background: #212327; border: 1px solid #50545A; border-radius: 12px; padding: 6px; display: flex; flex-direction: column; gap: 2px; box-shadow: 0 16px 40px rgba(0,0,0,.55); left: -60px; bottom: 30px">
+                  <div style="position: absolute; z-index: 8; width: 320px; box-sizing: border-box; background: #212327; border: 1px solid #50545A; border-radius: 12px; padding: 6px; display: flex; flex-direction: column; gap: 2px; box-shadow: 0 16px 40px rgba(0,0,0,.55); left: -100px; bottom: 30px">
                     <span class="muted" style="font-size: 11px; padding: 6px 10px 4px">Also add {{vidTitle}} to</span>
                     <sc-for list="{{addTargets}}" as="o" hint-placeholder-count="2">
                       <button style="{{o.style}}" onClick="{{o.add}}"><span>{{o.name}}</span><span style="color: #7AA578; font-size: 11px">{{o.mark}}</span></button>
                     </sc-for>
                     <div style="height: 1px; background: #34373B; margin: 4px 0"></div>
-                    <button style="{{projItemStyle}}" onClick="{{newProjectWith}}"><span>+ New project with this video</span></button>
+                    <button style="{{projItemStyle}}" onClick="{{newProjectWith}}"><span>+ Open in a new project</span></button>
                   </div>
                 </sc-if>
               </span>
@@ -1289,7 +1289,7 @@ class Component extends DCLogic {
           otherProjects: others.map((id) => ({ name: s.projects[id].name || 'Untitled', sub: clips(s.projects[id].order.length), style: item, open: () => open(id) })),
           newProject: () => create([], { tab: 'gen', mode: s.vers.length ? 'new' : 'change', newText: '', newImg: '' }),
           addMenu: !!s.addMenu, addMenuOpen: s.addMenu ? 'true' : 'false', toggleAddMenu: () => this.setState({ addMenu: !this.state.addMenu, projMenu: false }),
-          addTargets: others.map((id) => ({ name: s.projects[id].name || 'Untitled', mark: s.projects[id].order.includes(curVid) ? '✓ added' : '', style: item, add: () => addTo(id) })),
+          addTargets: others.map((id) => { const n = '“' + (s.projects[id].name || 'Untitled') + '”'; const had = s.projects[id].order.includes(curVid); return { name: had ? 'Open ' + n : 'Add to ' + n + ' and open it', mark: had ? '✓ added' : '', style: item, add: () => addTo(id) }; }),
           newProjectWith: () => create([curVid], { tab: 'edit' }),
         };
       })(),
