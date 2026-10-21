@@ -206,6 +206,14 @@ body{background:#0B0C0E;overflow:hidden}
               </sc-if>
               <span style="position: absolute; left: 12px; top: 12px; background: rgba(11,12,14,.75); border-radius: 5px; padding: 3px 8px">{{playerLabel}}</span>
               <div style="position: absolute; right: 12px; top: 12px; display: flex; gap: 6px"><sc-for list="{{playerTags}}" as="t" hint-placeholder-count="0"><span style="background: rgba(11,12,14,.75); border-radius: 5px; padding: 3px 8px; font-size: 11px">{{t}}</span></sc-for></div>
+              <sc-if value="{{playerReady}}" hint-placeholder-val="{{true}}">
+                <div style="position: absolute; left: 10px; right: 10px; bottom: 10px; display: flex; align-items: center; gap: 8px; background: rgba(11,12,14,.75); border-radius: 10px; padding: 6px 10px 6px 6px">
+                  <button style="width: 30px; height: 30px; flex: none; border: 0; border-radius: 8px; background: #ECEAE4; color: #17160F; font: inherit; font-size: 12px; cursor: pointer; padding: 0" onClick="{{gpToggle}}" aria-label="{{gpLabel}}" title="{{gpLabel}}">{{gpIcon}}</button>
+                  <button style="width: 30px; height: 30px; flex: none; border: 1px solid #50545A; border-radius: 8px; background: #212327; color: #ECEAE4; font: inherit; font-size: 11px; cursor: pointer; padding: 0" onClick="{{gpStop}}" aria-label="Stop" title="Stop — back to the start">■</button>
+                  <div style="flex: 1; height: 4px; background: #50545A; border-radius: 2px"><div style="{{gpBar}}"></div></div>
+                  <span style="font-size: 11px; font-variant-numeric: tabular-nums">{{gpTime}}</span>
+                </div>
+              </sc-if>
               <sc-if value="{{playerBusy}}" hint-placeholder-val="{{false}}">
                 <div style="position: absolute; inset: 0; background: rgba(11,12,14,.6); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px">
                   <span style="color: #FFD475">Rendering {{playerPct}}%</span>
@@ -453,7 +461,9 @@ body{background:#0B0C0E;overflow:hidden}
           <div style="height: 36px; flex: none; display: flex; align-items: center; gap: 6px; padding: 0 14px">
             <span class="muted" style="font-size: 12px">Click the ruler to move the playhead · select a clip for Split, Duplicate and Delete</span>
             <div style="flex: 1"></div>
-            <span style="font-size: 12px">{{playTC}} / {{editTC}}</span>
+            <button style="width: 30px; height: 30px; flex: none; border: 0; border-radius: 8px; background: #ECEAE4; color: #17160F; font: inherit; font-size: 12px; cursor: pointer; padding: 0" onClick="{{ePlayToggle}}" aria-label="{{ePlayLabel}}" title="{{ePlayLabel}}">{{ePlayIcon}}</button>
+            <button style="width: 30px; height: 30px; flex: none; border: 1px solid #50545A; border-radius: 8px; background: #212327; color: #ECEAE4; font: inherit; font-size: 11px; cursor: pointer; padding: 0" onClick="{{eStop}}" aria-label="Stop" title="Stop — playhead back to the start">■</button>
+            <span style="font-size: 12px; margin-left: 6px">{{playTC}} / {{editTC}}</span>
           </div>
           <div style="height: 22px; flex: none; display: flex"><div style="width: 110px"></div><div class="muted" style="flex: 1; display: flex; justify-content: space-between; padding-right: 16px; font-size: 11px"><sc-for list="{{ticks}}" as="t" hint-placeholder-count="6"><button class="lnk" style="font-size: 11px" onClick="{{t.go}}">{{t.label}}</button></sc-for></div></div>
           <div style="flex: 1; position: relative; display: flex; flex-direction: column; gap: 6px; padding-bottom: 8px">
@@ -813,7 +823,7 @@ class Component extends DCLogic {
       vers: [], cur: 0, vseq: 0, genCount: 0, editText: null, editImg: undefined, compare: false,
       order: [], rec: false, tl: null, selClip: -1, selTitle: -1, play: 12, leftTab: 'media', rightTab: 'inspector',
       tr: 'none', trP: 0, wsel: [], struck: [], caps: false, capPreset: 1, capSize: 1, capPos: 'bottom', burn: true, titles: [], titleWords: 'Padel at sunset',
-      rp: 'none', rpP: 0, cards: [], selCard: -1, pv: null, exp: null, dis: [], mode: 'change', newText: '', newImg: '', verMenu: -1, q: '', projMenu: false, addMenu: false, projId: 'p0', projSeq: 2, genName: '',
+      rp: 'none', rpP: 0, cards: [], selCard: -1, pv: null, exp: null, dis: [], mode: 'change', newText: '', newImg: '', verMenu: -1, q: '', projMenu: false, addMenu: false, gpT: 0, gpOn: false, gpFor: -1, ePlay: false, projId: 'p0', projSeq: 2, genName: '',
       projects: { p1: this.blankProject('Beach trip'), p2: this.blankProject('Product demo') } };
     if (!seed) return base;
     const img = { name: 'padel-friends.jpg' };
@@ -836,6 +846,8 @@ class Component extends DCLogic {
     if (s.tr === 'running') { ch = true; patch.trP = Math.min(100, s.trP + 3); if (patch.trP >= 100) patch.tr = 'done'; }
     if (s.rp === 'running') { ch = true; patch.rpP = Math.min(100, s.rpP + 4); if (patch.rpP >= 100) { patch.rp = 'done'; patch.cards = this.CLIPS.map((_, k) => ({ k, v: 0, st: 'new', rr: 100 })); patch.selCard = 0; } }
     if (s.cards.some((c) => c.rr < 100)) { ch = true; patch.cards = s.cards.map((c) => c.rr < 100 ? { ...c, rr: Math.min(100, c.rr + 5), v: c.rr + 5 >= 100 ? (c.v + 1) % (this.CLIPS[c.k].alts.length + 1) : c.v } : c); }
+    if (s.gpOn) { ch = true; const v = s.vers[s.gpFor]; if (!v || s.gpFor !== s.cur || v.p < 100 || v.status) patch.gpOn = false; else { const t = Math.min(v.d, s.gpT + 0.15); patch.gpT = t; if (t >= v.d) patch.gpOn = false; } }
+    if (s.ePlay) { ch = true; const end = this.editEnd || 0; const t = Math.min(end, s.play + 0.15); patch.play = t; if (t >= end) patch.ePlay = false; }
     if (s.pv && s.pv.playing) { ch = true; const t = Math.min(s.pv.len, s.pv.t + 0.15); patch.pv = { ...s.pv, t, playing: t < s.pv.len }; }
     if (s.pv && typeof s.pv.exp === 'number') { ch = true; patch.pv = { ...(patch.pv || s.pv), exp: s.pv.exp + 4 >= 100 ? 'done' : s.pv.exp + 4 }; }
     if (typeof s.exp === 'number') { ch = true; if (s.exp + 4 >= 100) { patch.exp = null; patch.toast = '✓ Exported ' + s.expWhat + ' to Movies › BeeRoll'; patch.toastT = 40; } else patch.exp = s.exp + 4; }
@@ -1086,6 +1098,7 @@ class Component extends DCLogic {
       return r;
     });
     const editSec = acc;
+    this.editEnd = editSec;
     const secs = Math.max(editSec, 1);
     const laneW = 1440 - 300 - 110 - 16;
     const pxs = (sec) => Math.round(sec / secs * laneW);
@@ -1237,12 +1250,18 @@ class Component extends DCLogic {
       toggleCompare: () => this.setState({ compare: !this.state.compare }), compareLabel: s.compare ? 'Close compare' : 'Compare with ' + (parentV ? parentV.name : ''),
       cmpA: box(parentV), cmpB: box(cv), cmpAName: parentV ? parentV.name + ' · ' + parentV.what : '', cmpBName: cv ? cv.name + ' · ' + cv.what : '',
       playerStyle: 'position:relative;overflow:hidden;border-radius:8px;' + (vert ? 'height:360px;aspect-ratio:9/16;' : 'width:640px;height:360px;') + 'background:' + this.G(cv ? cv.g : 0),
-      playerInner: 'position:absolute;inset:0;background:radial-gradient(circle at 50% 40%,rgba(255,230,180,.25),transparent 45%);' + (cv && cv.zoom && cv.p >= 100 ? 'animation:kb 6s ease-in-out infinite alternate' : ''),
+      playerInner: 'position:absolute;inset:0;background:radial-gradient(circle at 50% 40%,rgba(255,230,180,.25),transparent 45%);' + ((cv && cv.zoom && cv.p >= 100) || (s.gpOn && s.gpFor === s.cur) ? 'animation:kb 6s ease-in-out infinite alternate' : ''),
       playerFromImg: !!cv && !!cv.img && M[cv.model].img,
       playerLabel: cv ? cv.name + ' · ' + cv.d + ' s · ' + M[cv.model].name : '',
       playerTags: cv ? [cv.img ? 'from ' + cv.img : '', cv.vert === 'crop' ? '9:16 · cropped' : cv.vert === 'gen' ? '9:16 · full frame' : '', cv.zoom ? 'Slow zoom' : '', cv.freeze ? '+2 s hold' : ''].filter(Boolean) : [],
       playerBusy: !!cv && cv.p < 100 && !cv.status, playerPct: cv ? cv.p : 0, playerBar: 'width:' + (cv ? cv.p : 0) + '%;height:4px;background:#FFD475;border-radius:2px',
       playerStopped: !!cv && !!cv.status,
+      playerReady: !!cv && cv.p >= 100 && !cv.status,
+      gpIcon: s.gpOn && s.gpFor === s.cur ? '❚❚' : '▶', gpLabel: s.gpOn && s.gpFor === s.cur ? 'Pause' : 'Play',
+      gpTime: this.mmss(s.gpFor === s.cur ? s.gpT : 0) + ' / ' + this.mmss(cv ? cv.d : 0),
+      gpBar: 'width:' + (cv && s.gpFor === s.cur ? Math.round(100 * s.gpT / cv.d) : 0) + '%;height:100%;background:#F5A11D;border-radius:2px',
+      gpToggle: () => { const st = this.state; const v = st.vers[st.cur]; if (!v) return; if (st.gpOn && st.gpFor === st.cur) { this.setState({ gpOn: false }); return; } const t = st.gpFor === st.cur && st.gpT < v.d ? st.gpT : 0; this.setState({ gpOn: true, gpFor: st.cur, gpT: t }); },
+      gpStop: () => this.setState({ gpOn: false, gpT: 0, gpFor: this.state.cur }),
       stopTitle: cv && cv.status === 'failed' ? "This version didn't render" : 'Stopped', stopTitleStyle: 'font-weight:700;' + (cv && cv.status === 'failed' ? 'color:#F28B82' : ''),
       stopBody: cv && cv.status === 'failed' ? 'The provider stopped at 60%. This is what you asked for:' : 'Credits for a started version are not returned. This is what you asked for:',
       curText: cv ? cv.text : '', retryCur, retryCost: cl(retryCost), cancelCur,
@@ -1355,7 +1374,7 @@ class Component extends DCLogic {
             burnStyle: sw(s.burn), burnKnob: knob(s.burn), toggleBurn: () => this.setState({ burn: !this.state.burn }),
       titleWords: s.titleWords, onTitleWords: (e) => this.setState({ titleWords: e.target.value }),
       presets: [['Title', 'Large, centred'], ['Lower third', 'Name strip, bottom left'], ['Callout', 'Small, boxed']].map(([n, sum]) => ({ name: n, sum, add: () => { const w = (this.state.titleWords || '').trim(); if (!w) return; this.setState({ titles: this.state.titles.concat([{ words: w, start: playSec, d: 4 }]), titleWords: '' }); this.say('Text added at ' + this.mmss(playSec)); } })),
-      ticks, vidClips, titleClips, playheadX: 110 + pxs(playSec), playTC: this.tc(playSec), editTC: this.tc(editSec), editMMSS: this.mmss(editSec),
+      ticks, vidClips, titleClips, playheadX: 110 + pxs(playSec), playTC: this.tc(playSec), editTC: this.tc(editSec), ePlayIcon: s.ePlay ? '❚❚' : '▶', ePlayLabel: s.ePlay ? 'Pause' : 'Play', ePlayToggle: () => { const st = this.state; if (st.ePlay) { this.setState({ ePlay: false }); return; } if (editSec <= 0) return; this.setState({ ePlay: true, play: st.play >= editSec - 0.5 ? 0 : st.play }); }, eStop: () => this.setState({ ePlay: false, play: 0 }), editMMSS: this.mmss(editSec),
       showBar: barCenter >= 0, barItems,
       barStyle: 'position:absolute;z-index:5;display:flex;align-items:center;gap:2px;background:#2A2C30;border:1px solid #50545A;border-radius:10px;padding:4px;box-shadow:0 10px 28px rgba(0,0,0,.55);box-sizing:border-box;left:' + barLeft + 'px;top:' + (s.selTitle >= 0 ? 4 : 50) + 'px;width:' + barW + 'px',
       cardMode, anchorBox: selCardObj && cardMode ? 'position:absolute;top:0;bottom:8px;pointer-events:none;box-sizing:border-box;border-left:2px solid #F5A11D;border-right:2px solid #F5A11D;background:rgba(245,161,29,.10);left:' + (110 + pxs((tlItems.find((c) => c.src && c.src.kind === 'rec') || { start: 0 }).start + selCardObj.a)) + 'px;width:' + Math.max(pxs(selCardObj.d), 4) + 'px' : 'display:none',
