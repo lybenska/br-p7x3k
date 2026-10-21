@@ -1,0 +1,1431 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BeeRoll — Generate prototype</title>
+<style>
+
+body{margin:0}
+a{color:#F5A11D}a:hover{color:#D67E07}
+.win{position:relative;width:1440px;height:900px;background:#131416;color:#ECEAE4;font-family:"SF Mono",ui-monospace,Menlo,monospace;font-size:13px;display:flex;flex-direction:column;overflow:hidden;box-sizing:border-box;border-radius:12px;border:1px solid #34373B}
+.muted{color:#9A978F}
+.h{font-size:13px;font-weight:700;margin:0}
+.row{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.btn{font:inherit;color:#ECEAE4;background:#212327;border:1px solid #34373B;border-radius:7px;padding:8px 10px;cursor:pointer;text-align:left}
+.btn:hover{border-color:#50545A;background:#2A2C30}
+.pri{font:inherit;font-size:14px;color:#17160F;background:#F5A11D;border:0;border-radius:8px;padding:10px 18px;cursor:pointer}
+.pri:hover{background:#D67E07}
+.lnk{font:inherit;color:#9A978F;background:transparent;border:0;padding:0;cursor:pointer}
+.lnk:hover{color:#ECEAE4}
+.free{font-size:11px;color:#7AA578;border:1px solid #4a6a48;border-radius:4px;padding:1px 5px}
+.paid{font-size:11px;color:#FFD475;border:1px solid #6a5a30;border-radius:4px;padding:1px 5px}
+.ai{font-size:11px;background:#3d3420;color:#FFD475;border-radius:4px;padding:1px 5px}
+.imp{font-size:11px;background:#23303d;color:#9CC3E6;border-radius:4px;padding:1px 5px}
+textarea{font:inherit;color:#ECEAE4;background:transparent;border:0;padding:0;resize:none;box-sizing:border-box;line-height:1.5;outline:none;width:100%}
+textarea::placeholder{color:#76736C}
+input.name{font:inherit;font-size:14px;color:#ECEAE4;background:transparent;border:1px solid transparent;border-radius:6px;padding:4px 8px;width:auto;max-width:320px;outline:none}
+input.name:hover{border-color:#34373B}
+input.name:focus{border-color:#F5A11D;background:#1A1B1E}
+@keyframes kb{from{transform:scale(1)}to{transform:scale(1.18)}}
+button:focus{outline:none}
+button:focus-visible{outline:2px solid #F5A11D;outline-offset:1px}
+
+html,body{height:100%}
+body{background:#0B0C0E;overflow:hidden}
+#stage{position:fixed;inset:0;display:flex;align-items:center;justify-content:center}
+#app{width:1440px;height:900px;flex:none;transform-origin:center center}
+</style>
+</head>
+<body>
+<div id="stage"><div id="app"></div></div>
+<template id="tpl">
+<div class="win">
+
+  <div style="height: 54px; flex: none; display: flex; align-items: center; gap: 12px; padding: 0 16px; border-bottom: 1px solid #212327">
+    <span style="width: 12px; height: 12px; border-radius: 50%; background: #FF5F57"></span>
+    <span style="width: 12px; height: 12px; border-radius: 50%; background: #FEBC2E"></span>
+    <span style="width: 12px; height: 12px; border-radius: 50%; background: #28C840"></span>
+    <div style="margin-left: 8px; position: relative; display: flex; align-items: center; gap: 2px">
+      <label style="display: flex"><span style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Project name</span><input class="name" size="{{nameSize}}" value="{{name}}" onChange="{{onName}}" placeholder="Untitled" title="Project name — click to rename"></label>
+      <button class="lnk" style="width: 26px; height: 26px; border-radius: 6px; font-size: 11px" onClick="{{toggleProjMenu}}" aria-label="Switch project" aria-haspopup="true" aria-expanded="{{projMenuOpen}}">▾</button>
+      <sc-if value="{{projMenu}}" hint-placeholder-val="{{false}}">
+        <div style="position: absolute; z-index: 8; width: 280px; box-sizing: border-box; background: #212327; border: 1px solid #50545A; border-radius: 12px; padding: 6px; display: flex; flex-direction: column; gap: 2px; box-shadow: 0 16px 40px rgba(0,0,0,.55); left: 0; top: 36px">
+          <span class="muted" style="font-size: 11px; padding: 6px 10px 4px">Projects</span>
+          <button style="{{projCurStyle}}" onClick="{{toggleProjMenu}}"><span>{{projName}}</span><span style="color: #F5A11D">✓</span></button>
+          <sc-for list="{{otherProjects}}" as="o" hint-placeholder-count="2">
+            <button style="{{o.style}}" onClick="{{o.open}}"><span>{{o.name}}</span><span class="muted" style="font-size: 11px">{{o.sub}}</span></button>
+          </sc-for>
+          <div style="height: 1px; background: #34373B; margin: 4px 0"></div>
+          <button style="{{projItemStyle}}" onClick="{{newProject}}"><span>+ New project</span></button>
+        </div>
+      </sc-if>
+    </div>
+    <div style="flex: 1; display: flex; justify-content: center">
+      <div style="display: flex; background: #1A1B1E; border: 1px solid #34373B; border-radius: 8px; padding: 2px">
+        <button style="{{tabGenStyle}}" onClick="{{toGen}}">Generate</button>
+        <button style="{{tabEditStyle}}" onClick="{{toEdit}}">Edit</button>
+      </div>
+    </div>
+    <span class="muted" style="width: 170px; text-align: right">AI credits {{creditsText}}</span>
+    <sc-if value="{{isEditTab}}" hint-placeholder-val="{{false}}">
+      <button class="btn" style="{{pvBtnStyle}}" onClick="{{openPvEdit}}" title="Full-window preview · Space plays, Esc closes">▶ Preview</button>
+      <button class="btn" style="{{expBtnStyle}}" onClick="{{exportEdit}}"><span style="color: #F5A11D">●</span> Export</button>
+    </sc-if>
+    <button class="lnk" style="margin-left: 4px" onClick="{{restart}}">Start over</button>
+  </div>
+
+  <sc-if value="{{isGenAny}}" hint-placeholder-val="{{true}}">
+    <div style="flex: 1; display: flex; min-height: 0">
+      <sc-if value="{{hasVids}}" hint-placeholder-val="{{false}}">
+      <div style="width: 260px; flex: none; border-right: 1px solid #212327; display: flex; flex-direction: column; min-height: 0; box-sizing: border-box">
+        <div style="padding: 14px 14px 10px; display: flex; flex-direction: column; gap: 10px">
+          <div class="row"><span class="h" style="font-size: 15px">Videos <span class="muted" style="font-weight: 400">· {{videoCount}}</span></span><button class="lnk" style="font-size: 12px; color: #F5A11D" onClick="{{focusNew}}">+ New video</button></div>
+          <label style="display: flex"><span style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Search videos</span><input style="font: inherit; font-size: 12px; color: #ECEAE4; background: #1A1B1E; border: 1px solid #34373B; border-radius: 8px; padding: 7px 10px; width: 100%; box-sizing: border-box; outline: none" value="{{q}}" onChange="{{onQ}}" placeholder="Search by what they show"></label>
+        </div>
+        <div style="flex: 1; min-height: 0; overflow-y: auto; padding: 0 8px 12px; display: flex; flex-direction: column; gap: 2px">
+          <sc-if value="{{isNewMode}}" hint-placeholder-val="{{false}}">
+            <div style="border-radius: 8px; padding: 6px; display: flex; gap: 10px; align-items: center; background: #212327; box-shadow: inset 2px 0 0 #F5A11D">
+              <span style="flex: none; width: 64px; height: 36px; border-radius: 5px; border: 1px dashed #50545A; box-sizing: border-box; display: flex; align-items: center; justify-content: center; color: #8A8D93">+</span>
+              <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px"><span>New video</span><span class="muted" style="font-size: 11px">Describe it on the right</span></span>
+            </div>
+          </sc-if>
+          <sc-for list="{{videoList}}" as="w" hint-placeholder-count="3">
+            <button style="{{w.style}}" onClick="{{w.pick}}">
+              <span style="{{w.thumb}}"><span style="{{w.bar}}"></span></span>
+              <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px">
+                <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{w.label}}</span>
+                <span class="muted" style="font-size: 11px">{{w.sub}}</span>
+                <sc-if value="{{w.hasUsed}}" hint-placeholder-val="{{false}}"><span style="font-size: 11px; color: #7AA578; line-height: 1.35">{{w.used}}</span></sc-if>
+              </span>
+            </button>
+          </sc-for>
+          <sc-if value="{{noMatches}}" hint-placeholder-val="{{false}}"><span class="muted" style="font-size: 12px; padding: 8px 6px">No video shows “{{q}}”.</span></sc-if>
+        </div>
+      </div>
+      </sc-if>
+      <sc-if value="{{showStart}}" hint-placeholder-val="{{true}}">
+      <div style="flex: 1; display: flex; align-items: center; justify-content: center; padding-bottom: 40px">
+        <div style="width: 780px; display: flex; flex-direction: column; gap: 14px">
+          <h1 style="margin: 0 0 6px; font-size: 26px; font-weight: 700; text-align: center">What should the video show?</h1>
+          <div style="{{composerStyle}}" onDragOver="{{onDragOver}}" onDragLeave="{{onDragLeave}}" onDrop="{{onDrop}}">
+            <sc-if value="{{hasImg}}" hint-placeholder-val="{{false}}">
+              <div style="display: flex; gap: 10px; align-items: center; align-self: flex-start; background: #212327; border: 1px solid #34373B; border-radius: 10px; padding: 6px 8px 6px 6px">
+                <span style="width: 44px; height: 44px; border-radius: 6px; background: linear-gradient(135deg,#2c4a3a,#6f9a5c 60%,#d9c27a)"></span>
+                <span style="display: flex; flex-direction: column; gap: 2px"><span>{{imgName}}</span><span style="{{imgUseStyle}}">{{imgUse}}</span></span>
+                <button class="lnk" style="width: 28px; height: 28px; font-size: 14px" onClick="{{removeImg}}" aria-label="Remove image">✕</button>
+              </div>
+            </sc-if>
+            <textarea style="height: 96px; font-size: 16px" value="{{prompt}}" onChange="{{onPrompt}}" onKeyDown="{{onPromptKey}}" placeholder="Describe the video. Drop a photo here to start from it." aria-label="Describe the video"></textarea>
+            <div style="position: relative; display: flex; align-items: center; gap: 8px; height: 36px">
+              <button style="width: 36px; height: 36px; flex: none; border-radius: 18px; border: 1px solid #34373B; background: #212327; color: #ECEAE4; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0" onClick="{{addImg}}" aria-label="Attach a photo" title="Attach a photo — or drag one onto this box">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"></rect><circle cx="9" cy="10" r="1.6"></circle><path d="M21 16l-5-5-8 8"></path></svg>
+              </button>
+              <button style="{{modelBtnStyle}}" onClick="{{toggleModelMenu}}" aria-expanded="{{modelMenuOpen}}" aria-haspopup="true"><span>{{modelName}}</span><span class="muted">{{modelSub}}</span><span class="muted" style="font-size: 10px">▾</span></button>
+              <div style="display: flex; height: 36px; box-sizing: border-box; align-items: center; background: #131416; border: 1px solid #34373B; border-radius: 18px; padding: 3px">
+                <sc-for list="{{lenOpts}}" as="m" hint-placeholder-count="3"><button style="{{m.style}}" onClick="{{m.pick}}">{{m.label}}</button></sc-for>
+              </div>
+              <div style="flex: 1"></div>
+              <button class="pri" style="{{genBtnStyle}}" onClick="{{generate}}">◆ Generate · {{genCostShort}}</button>
+              <sc-if value="{{modelMenu}}" hint-placeholder-val="{{false}}">
+                <div style="position: absolute; left: 44px; bottom: 44px; z-index: 6; width: 340px; background: #212327; border: 1px solid #50545A; border-radius: 12px; padding: 6px; display: flex; flex-direction: column; gap: 2px; box-shadow: 0 16px 40px rgba(0,0,0,.55)">
+                  <sc-for list="{{modelOpts}}" as="m" hint-placeholder-count="3">
+                    <button style="{{m.style}}" onClick="{{m.pick}}">
+                      <span class="row"><span style="font-weight: 700">{{m.name}} <span class="muted" style="font-weight: 400">· {{m.sub}}</span></span><span style="color: #F5A11D">{{m.check}}</span></span>
+                      <span class="muted" style="font-size: 11px">{{m.detail}}</span>
+                      <span style="{{m.photoStyle}}">{{m.photo}}</span>
+                    </button>
+                  </sc-for>
+                </div>
+              </sc-if>
+            </div>
+          </div>
+          <sc-if value="{{imgConflict}}" hint-placeholder-val="{{false}}">
+            <div style="display: flex; gap: 12px; align-items: center; background: #3d3420; color: #FFD475; border-radius: 10px; padding: 10px 14px">
+              <span style="flex: 1; line-height: 1.45">{{modelName}} makes video from text only — it would ignore your photo.</span>
+              <button class="btn" style="padding: 5px 10px" onClick="{{switchImgModel}}">Use Sora 2</button>
+              <button class="lnk" style="color: #FFD475" onClick="{{removeImg}}">Remove photo</button>
+            </div>
+          </sc-if>
+          <div class="muted" style="display: flex; justify-content: space-between; font-size: 12px; padding: 0 4px">
+            <span>Enter generates · Shift-Enter starts a new line</span>
+            <span>{{lenNote}}</span>
+          </div>
+          <sc-if value="{{hasStartSugs}}" hint-placeholder-val="{{false}}">
+            <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 6px">
+              <span class="muted" style="font-size: 12px; padding: 0 4px"><span style="color: #F5A11D">✦</span> Before you spend — suggestions made on your Mac</span>
+              <div style="display: flex; gap: 10px">
+                <sc-for list="{{startSugs}}" as="g" hint-placeholder-count="2">
+                <div style="flex: 1; min-width: 0; background: #1A1B1E; border: 1px solid #34373B; border-radius: 12px; padding: 10px 12px; display: flex; flex-direction: column; gap: 6px">
+                  <span style="line-height: 1.4">{{g.title}}</span>
+                  <span class="muted" style="font-size: 11px; line-height: 1.4">{{g.why}}</span>
+                  <div style="display: flex; gap: 10px; align-items: center; margin-top: auto; padding-top: 2px">
+                    <button style="{{g.accStyle}}" onClick="{{g.accept}}">{{g.accLabel}}</button>
+                    <button class="lnk" style="font-size: 12px; white-space: nowrap" onClick="{{g.dismiss}}">Not now</button>
+                    <div style="flex: 1"></div>
+                    <span class="{{g.kind}}">{{g.kindLabel}}</span>
+                  </div>
+                </div>
+                </sc-for>
+              </div>
+            </div>
+          </sc-if>
+          <sc-if value="{{isNewMode}}" hint-placeholder-val="{{false}}"><span style="text-align: center; margin-top: 18px"><button class="lnk" style="font-size: 12px" onClick="{{toChange}}">Cancel — back to {{vidTitle}}</button></span></sc-if><sc-if value="{{noVids}}" hint-placeholder-val="{{true}}"><span class="muted" style="font-size: 12px; text-align: center; margin-top: 18px">Have a video already? Switch to Edit.</span></sc-if>
+        </div>
+      </div>
+      </sc-if>
+      <sc-if value="{{showWork}}" hint-placeholder-val="{{false}}">
+      <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; padding: 18px 24px 16px; gap: 12px; background: #0F1012">
+        <sc-if value="{{isNewMode}}" hint-placeholder-val="{{false}}">
+          <div style="height: 370px; display: flex; align-items: center; justify-content: center">
+            <div style="width: 640px; height: 360px; box-sizing: border-box; border: 1.5px dashed #34373B; border-radius: 12px; background: #131416; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px">
+              <span style="font-size: 15px; font-weight: 700">Your new video will appear here</span>
+              <span class="muted" style="font-size: 12px">Describe it on the right →</span>
+            </div>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 10px">
+            <span class="h muted">Versions</span>
+            <div style="width: 150px; height: 120px; box-sizing: border-box; border: 1px dashed #34373B; border-radius: 10px"></div>
+          </div>
+        </sc-if>
+        <sc-if value="{{notNewMode}}" hint-placeholder-val="{{true}}">
+        <sc-if value="{{compareOn}}" hint-placeholder-val="{{false}}">
+          <div style="align-self: center; display: flex; gap: 16px; align-items: flex-start; height: 370px">
+            <div style="display: flex; flex-direction: column; gap: 6px"><div style="{{cmpA}}"></div><span class="muted" style="font-size: 12px">{{cmpAName}}</span></div>
+            <div style="display: flex; flex-direction: column; gap: 6px"><div style="{{cmpB}}"></div><span style="font-size: 12px; color: #F5A11D">{{cmpBName}}</span></div>
+          </div>
+        </sc-if>
+        <sc-if value="{{compareOff}}" hint-placeholder-val="{{true}}">
+          <div style="height: 370px; display: flex; align-items: center; justify-content: center">
+            <div style="{{playerStyle}}">
+              <div style="{{playerInner}}"></div>
+              <sc-if value="{{playerFromImg}}" hint-placeholder-val="{{false}}">
+                <div style="position: absolute; left: 30%; bottom: 0; width: 14%; height: 62%; border-radius: 40% 40% 0 0; background: #f0e4ce; opacity: .5"></div>
+                <div style="position: absolute; left: 56%; bottom: 0; width: 14%; height: 58%; border-radius: 40% 40% 0 0; background: #f0e4ce; opacity: .5"></div>
+              </sc-if>
+              <span style="position: absolute; left: 12px; top: 12px; background: rgba(11,12,14,.75); border-radius: 5px; padding: 3px 8px">{{playerLabel}}</span>
+              <div style="position: absolute; right: 12px; top: 12px; display: flex; gap: 6px"><sc-for list="{{playerTags}}" as="t" hint-placeholder-count="0"><span style="background: rgba(11,12,14,.75); border-radius: 5px; padding: 3px 8px; font-size: 11px">{{t}}</span></sc-for></div>
+              <sc-if value="{{playerBusy}}" hint-placeholder-val="{{false}}">
+                <div style="position: absolute; inset: 0; background: rgba(11,12,14,.6); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px">
+                  <span style="color: #FFD475">Rendering {{playerPct}}%</span>
+                  <div style="width: 240px; height: 4px; background: #50545A; border-radius: 2px"><div style="{{playerBar}}"></div></div>
+                  <button class="btn" style="padding: 4px 12px" onClick="{{cancelCur}}">Cancel</button>
+                </div>
+              </sc-if>
+              <sc-if value="{{playerStopped}}" hint-placeholder-val="{{false}}">
+                <div style="position: absolute; inset: 0; background: rgba(11,12,14,.78); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; text-align: center; padding: 0 60px">
+                  <span style="{{stopTitleStyle}}">{{stopTitle}}</span>
+                  <span class="muted" style="line-height: 1.45">{{stopBody}}</span>
+                  <span style="background: #1A1B1E; border: 1px solid #34373B; border-radius: 8px; padding: 8px 10px; line-height: 1.45; max-width: 460px">“{{curText}}”</span>
+                  <div style="display: flex; gap: 8px"><button class="pri" style="font-size: 13px; padding: 7px 16px" onClick="{{retryCur}}">Retry · {{retryCost}}</button><button class="btn" onClick="{{focusEdit}}">Change the prompt</button></div>
+                </div>
+              </sc-if>
+            </div>
+          </div>
+        </sc-if>
+
+        <div style="display: flex; flex-direction: column; gap: 10px">
+          <div class="row"><span class="h">Versions of {{vidTitle}}</span><span style="display: flex; gap: 14px; align-items: center"><span class="muted">Click to go back — free. ✕ removes a version.</span><sc-if value="{{hasParent}}" hint-placeholder-val="{{false}}"><button class="btn" style="padding: 4px 10px" onClick="{{toggleCompare}}">{{compareLabel}}</button></sc-if></span></div>
+          <div style="display: flex; align-items: flex-start; gap: 8px; overflow: hidden">
+            <sc-for list="{{vers}}" as="v" hint-placeholder-count="2">
+              <div style="{{v.card}}">
+                <button style="font: inherit; color: inherit; text-align: left; background: transparent; border: 0; padding: 0; cursor: pointer; display: flex; flex-direction: column; gap: 5px" onClick="{{v.pick}}">
+                  <div style="{{v.thumb}}"><div style="{{v.bar}}"></div></div>
+                  <span class="row"><span style="{{v.nameStyle}}">{{v.name}}</span><span class="{{v.kind}}">{{v.cost}}</span></span>
+                  <span class="muted" style="font-size: 11px; line-height: 1.35">{{v.what}}</span>
+                  <sc-if value="{{v.hasFrom}}" hint-placeholder-val="{{false}}"><span style="color: #F5A11D; font-size: 11px">↳ {{v.fromLabel}}</span></sc-if>
+                  <sc-if value="{{v.hasStatus}}" hint-placeholder-val="{{false}}"><span style="color: #F28B82; font-size: 11px">{{v.statusText}}</span></sc-if>
+                </button>
+                <button class="lnk" style="position: absolute; right: 10px; top: 10px; width: 22px; height: 22px; border-radius: 11px; background: rgba(11,12,14,.75); color: #ECEAE4; font-size: 11px" onClick="{{v.remove}}" aria-label="{{v.removeLabel}}" title="{{v.removeLabel}}">✕</button>
+                <button class="lnk" style="position: absolute; right: 36px; top: 10px; width: 22px; height: 22px; border-radius: 11px; background: rgba(11,12,14,.75); color: #ECEAE4; font-size: 12px; line-height: 1" onClick="{{v.toggleMenu}}" aria-label="More for {{v.name}}" aria-haspopup="true" aria-expanded="{{v.menuOpen}}">⋯</button>
+                <sc-if value="{{v.hasMenu}}" hint-placeholder-val="{{false}}">
+                  <div style="position: absolute; right: 8px; top: 36px; z-index: 6; width: 210px; background: #212327; border: 1px solid #50545A; border-radius: 10px; padding: 4px; display: flex; flex-direction: column; box-shadow: 0 12px 30px rgba(0,0,0,.5)">
+                    <button style="{{v.moveStyle}}" onClick="{{v.move}}"><span>Move to a new video</span><span class="muted" style="font-size: 11px">{{v.moveNote}}</span></button>
+                  </div>
+                </sc-if>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+        </sc-if>
+      </div>
+
+      <div style="width: 360px; flex: none; border-left: 1px solid #212327; display: flex; flex-direction: column; box-sizing: border-box">
+        <div style="flex: 1; min-height: 0; overflow: hidden; padding: 14px; display: flex; flex-direction: column; gap: 10px">
+          <div style="display: flex; flex-direction: column; gap: 2px"><span class="row"><span class="h" style="font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{panelTitle}}</span></span><sc-if value="{{isNewMode}}" hint-placeholder-val="{{false}}"><span class="muted" style="font-size: 12px">{{panelNote}}</span></sc-if></div>
+          <div style="{{editBoxStyle}}" onDragOver="{{onDragOver}}" onDragLeave="{{onDragLeave}}" onDrop="{{onDropEdit}}">
+            <sc-if value="{{editHasImg}}" hint-placeholder-val="{{false}}">
+              <div style="display: flex; gap: 8px; align-items: center; align-self: flex-start; background: #212327; border: 1px solid #34373B; border-radius: 10px; padding: 5px 6px 5px 5px">
+                <span style="width: 32px; height: 32px; border-radius: 6px; background: linear-gradient(135deg,#2c4a3a,#6f9a5c 60%,#d9c27a)"></span>
+                <span style="font-size: 12px">{{editImgName}}</span>
+                <button class="lnk" style="width: 24px; height: 24px; font-size: 13px" onClick="{{removeEditImg}}" aria-label="Remove photo">✕</button>
+              </div>
+            </sc-if>
+            <textarea style="height: 84px; font-size: 14px" value="{{editText}}" onChange="{{onEditText}}" onKeyDown="{{onEditKey}}" placeholder="{{editPlaceholder}}" aria-label="What the video shows" data-edit-prompt="1"></textarea>
+            <div style="position: relative; display: flex; align-items: center; gap: 6px; height: 32px">
+              <button style="width: 32px; height: 32px; flex: none; border-radius: 16px; border: 1px solid #34373B; background: #212327; color: #ECEAE4; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0" onClick="{{addEditImg}}" aria-label="Attach a photo" title="Attach a photo — or drag one onto this box">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"></rect><circle cx="9" cy="10" r="1.6"></circle><path d="M21 16l-5-5-8 8"></path></svg>
+              </button>
+              <button style="{{editModelBtnStyle}}" onClick="{{toggleModelMenuR}}" aria-expanded="{{modelMenuROpen}}" aria-haspopup="true" title="{{modelName}} · {{modelSub}}"><span>{{modelName}}</span><span class="muted" style="font-size: 10px">▾</span></button>
+              <div style="display: flex; height: 32px; box-sizing: border-box; align-items: center; background: #131416; border: 1px solid #34373B; border-radius: 16px; padding: 2px">
+                <sc-for list="{{editLenOpts}}" as="m" hint-placeholder-count="3"><button style="{{m.style}}" onClick="{{m.pick}}">{{m.label}}</button></sc-for>
+              </div>
+              <sc-if value="{{modelMenuR}}" hint-placeholder-val="{{false}}">
+                <div style="position: absolute; left: 0; bottom: 40px; z-index: 6; width: 306px; box-sizing: border-box; background: #212327; border: 1px solid #50545A; border-radius: 12px; padding: 6px; display: flex; flex-direction: column; gap: 2px; box-shadow: 0 16px 40px rgba(0,0,0,.55)">
+                  <sc-for list="{{modelOpts}}" as="m" hint-placeholder-count="3">
+                    <button style="{{m.style}}" onClick="{{m.pick}}">
+                      <span class="row"><span style="font-weight: 700">{{m.name}} <span class="muted" style="font-weight: 400">· {{m.sub}}</span></span><span style="color: #F5A11D">{{m.check}}</span></span>
+                      <span class="muted" style="font-size: 11px">{{m.detail}}</span>
+                      <span style="{{m.photoStyle}}">{{m.photo}}</span>
+                    </button>
+                  </sc-for>
+                </div>
+              </sc-if>
+            </div>
+            <button style="{{fromTextStyle}}" onClick="{{fromText}}" title="{{enterHint}}">{{fromTextLabel}}</button>
+          </div>
+                    <sc-if value="{{editConflict}}" hint-placeholder-val="{{false}}">
+            <div style="display: flex; gap: 8px; align-items: center; background: #3d3420; color: #FFD475; border-radius: 10px; padding: 8px 10px; font-size: 12px">
+              <span style="flex: 1; line-height: 1.4">{{modelName}} ignores photos.</span>
+              <button class="btn" style="padding: 4px 8px; font-size: 12px" onClick="{{switchImgModel}}">Use Sora 2</button>
+              <button class="lnk" style="color: #FFD475; font-size: 12px" onClick="{{removeEditImg}}">Remove</button>
+            </div>
+          </sc-if>
+          <sc-if value="{{modeIsChange}}" hint-placeholder-val="{{true}}">
+          <div class="row" style="margin-top: 4px"><span class="h">On your Mac</span><span class="free">free</span></div>
+          <div style="display: flex; flex-wrap: wrap; gap: 6px">
+            <button class="btn" style="padding: 6px 9px" onClick="{{fSlower}}">Slower</button>
+            <button class="btn" style="{{trimStyle}}" onClick="{{fTrimS}}" title="{{trimWhy}}">{{trimLabel}}</button>
+            <button class="btn" style="{{vertStyle}}" onClick="{{fVertS}}" title="{{vertWhy}}">{{vertLabel}}</button>
+            <button class="btn" style="padding: 6px 9px" onClick="{{fZoom}}">Slow zoom</button>
+            <button class="btn" style="padding: 6px 9px" onClick="{{fFreeze}}">Freeze last frame</button>
+          </div>
+          <div class="row" style="margin-top: 4px"><span class="h" title="A new generation is drawn from scratch — it can change more than you asked. Continuing from the last frame stays closest.">New generation</span><span class="paid">credits</span></div>
+          <button class="btn row" onClick="{{pTake}}"><span>Another take</span><span class="muted">{{takeCost}}</span></button>
+          <button class="btn row" style="{{extStyle}}" onClick="{{pExtend}}" title="{{extWhy}}"><span>{{extLabel}}</span><span class="muted">{{extCost}}</span></button>
+          <button class="btn row" onClick="{{pVert}}"><span>Vertical, full frame</span><span class="muted">{{takeCost}}</span></button>
+          </sc-if>
+          <div style="flex: 1"></div>
+        </div>
+        <div style="flex: none; border-top: 1px solid #212327; padding: 12px 14px 14px">
+          <sc-if value="{{showAddEdit}}" hint-placeholder-val="{{true}}">
+            <div style="position: relative; display: flex; gap: 2px">
+              <button class="pri" style="flex: 1; min-width: 0; text-align: center; border-radius: 10px 0 0 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis" onClick="{{addToEdit}}">Add to “{{projName}}”</button>
+              <button class="pri" style="flex: none; width: 36px; border-radius: 0 10px 10px 0; padding: 0" onClick="{{toggleAddMenu}}" aria-label="Add to another project" aria-haspopup="true" aria-expanded="{{addMenuOpen}}">▾</button>
+              <sc-if value="{{addMenu}}" hint-placeholder-val="{{false}}">
+                <div style="position: absolute; z-index: 8; width: 280px; box-sizing: border-box; background: #212327; border: 1px solid #50545A; border-radius: 12px; padding: 6px; display: flex; flex-direction: column; gap: 2px; box-shadow: 0 16px 40px rgba(0,0,0,.55); right: 0; bottom: 44px">
+                  <span class="muted" style="font-size: 11px; padding: 6px 10px 4px">Add {{vidTitle}} to</span>
+                  <sc-for list="{{addTargets}}" as="o" hint-placeholder-count="2">
+                    <button style="{{o.style}}" onClick="{{o.add}}"><span>{{o.name}}</span><span style="color: #7AA578; font-size: 11px">{{o.mark}}</span></button>
+                  </sc-for>
+                  <div style="height: 1px; background: #34373B; margin: 4px 0"></div>
+                  <button style="{{projItemStyle}}" onClick="{{newProjectWith}}"><span>+ New project with this video</span></button>
+                </div>
+              </sc-if>
+            </div>
+          </sc-if>
+          <sc-if value="{{showInEdit}}" hint-placeholder-val="{{false}}">
+            <div style="display: flex; flex-direction: column; gap: 8px">
+            <span style="color: #7AA578; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">✓ In “{{projName}}” · uses {{gvName}}</span>
+            <div style="display: flex; gap: 12px; align-items: center">
+              <button class="lnk" style="font-size: 12px" onClick="{{removeFromEdit}}">Remove</button>
+              <span style="position: relative; display: flex">
+                <button class="lnk" style="font-size: 12px" onClick="{{toggleAddMenu}}" aria-haspopup="true" aria-expanded="{{addMenuOpen}}">Also add to ▾</button>
+                <sc-if value="{{addMenu}}" hint-placeholder-val="{{false}}">
+                  <div style="position: absolute; z-index: 8; width: 280px; box-sizing: border-box; background: #212327; border: 1px solid #50545A; border-radius: 12px; padding: 6px; display: flex; flex-direction: column; gap: 2px; box-shadow: 0 16px 40px rgba(0,0,0,.55); left: -60px; bottom: 30px">
+                    <span class="muted" style="font-size: 11px; padding: 6px 10px 4px">Also add {{vidTitle}} to</span>
+                    <sc-for list="{{addTargets}}" as="o" hint-placeholder-count="2">
+                      <button style="{{o.style}}" onClick="{{o.add}}"><span>{{o.name}}</span><span style="color: #7AA578; font-size: 11px">{{o.mark}}</span></button>
+                    </sc-for>
+                    <div style="height: 1px; background: #34373B; margin: 4px 0"></div>
+                    <button style="{{projItemStyle}}" onClick="{{newProjectWith}}"><span>+ New project with this video</span></button>
+                  </div>
+                </sc-if>
+              </span>
+              <div style="flex: 1"></div>
+              <button class="btn" onClick="{{sendToEdit}}">Open Edit →</button>
+            </div>
+            </div>
+          </sc-if>
+        </div>
+      </div>
+      </sc-if>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{isEditEmpty}}" hint-placeholder-val="{{false}}">
+    <div style="flex: 1; display: flex; align-items: center; justify-content: center">
+      <div style="width: 640px; display: flex; flex-direction: column; align-items: center; gap: 18px; text-align: center">
+        <h1 style="margin: 0; font-size: 24px; font-weight: 700">Edit a video you have</h1>
+        <button style="width: 100%; height: 240px; font: inherit; color: #9A978F; background: #17181B; border: 1.5px dashed #50545A; border-radius: 16px; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px" onClick="{{importRec}}">
+          <span style="font-size: 32px; color: #ECEAE4">⤓</span>
+          <span style="color: #ECEAE4; font-size: 15px">Drop a video here</span>
+          <span>or click to Import…</span>
+        </button>
+        <span class="muted" style="font-size: 12px">Free. Cut by deleting words, add captions, find short vertical Clips.</span>
+        <sc-if value="{{hasGenNotInEdit}}" hint-placeholder-val="{{false}}"><span style="font-size: 12px">You have {{videoCount}} generated · <button class="lnk" style="color: #F5A11D; font-size: 12px" onClick="{{toGen}}">pick one in Generate and add it to the edit →</button></span></sc-if>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{isEditFull}}" hint-placeholder-val="{{false}}">
+    <div style="flex: 1; display: flex; min-height: 0">
+      <div style="flex: 1; min-width: 0; display: flex; flex-direction: column">
+        <div style="flex: 1; display: flex; min-height: 0">
+          <div style="width: 300px; flex: none; border-right: 1px solid #212327; padding: 12px; display: flex; flex-direction: column; gap: 12px; box-sizing: border-box; overflow: hidden">
+            <div style="display: flex; background: #1A1B1E; border: 1px solid #34373B; border-radius: 8px; padding: 2px">
+              <sc-for list="{{leftTabs}}" as="t" hint-placeholder-count="4"><button style="{{t.style}}" onClick="{{t.pick}}">{{t.label}}</button></sc-for>
+            </div>
+            <sc-if value="{{lMedia}}" hint-placeholder-val="{{true}}">
+              <div class="row"><span class="h">Media</span><button class="btn" style="padding: 4px 10px" onClick="{{importRec}}">Import…</button></div>
+              <sc-for list="{{mediaRows}}" as="c" hint-placeholder-count="2">
+                <div style="display: flex; gap: 10px; background: #1A1B1E; border-radius: 8px; padding: 6px">
+                  <div style="{{c.thumb}}"></div>
+                  <div style="display: flex; flex-direction: column; gap: 4px; min-width: 0"><span style="overflow: hidden; white-space: nowrap; text-overflow: ellipsis">{{c.name}}</span><span class="muted" style="font-size: 11px">{{c.meta}}</span><span><span class="{{c.badgeClass}}">{{c.badge}}</span></span></div>
+                </div>
+              </sc-for>
+              <sc-if value="{{genPending}}" hint-placeholder-val="{{false}}"><span class="muted" style="font-size: 12px">A generated version is still rendering — it lands here when ready.</span></sc-if>
+            </sc-if>
+            <sc-if value="{{lTranscript}}" hint-placeholder-val="{{false}}">
+              <sc-if value="{{trNone}}" hint-placeholder-val="{{true}}">
+                <div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; text-align: center; padding: 0 12px">
+                  <span style="font-weight: 700">{{trEmptyTitle}}</span>
+                  <span class="muted" style="line-height: 1.5">{{trEmptyBody}}</span>
+                  <button class="btn" style="text-align: center" onClick="{{trAction}}">{{trActionLabel}}</button>
+                </div>
+              </sc-if>
+              <sc-if value="{{trRunning}}" hint-placeholder-val="{{false}}">
+                <div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px">
+                  <span>{{trPhase}}</span>
+                  <div style="width: 200px; height: 4px; background: #50545A; border-radius: 2px"><div style="{{trBar}}"></div></div>
+                  <span class="muted" style="font-size: 12px">On your Mac · free</span>
+                </div>
+              </sc-if>
+              <sc-if value="{{trDone}}" hint-placeholder-val="{{false}}">
+                <span class="muted" style="font-size: 12px; line-height: 1.45">The words spoken in your video. Delete words to cut those moments out.</span>
+                <div style="flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; line-height: 1.6; padding-right: 4px">
+                  <sc-for list="{{segs}}" as="g" hint-placeholder-count="4">
+                    <div><span class="muted" style="font-size: 11px">{{g.tc}}</span><br>
+                      <sc-for list="{{g.words}}" as="w" hint-placeholder-count="5"><button style="{{w.style}}" onClick="{{w.pick}}">{{w.t}}</button></sc-for>
+                    </div>
+                  </sc-for>
+                </div>
+                <sc-if value="{{hasSel}}" hint-placeholder-val="{{false}}">
+                  <div style="display: flex; gap: 8px; align-items: center; background: #1A1B1E; border-radius: 8px; padding: 8px">
+                    <span class="muted" style="flex: 1">{{selCount}}</span>
+                    <button class="btn" style="padding: 4px 8px" onClick="{{removeSel}}">Cut these</button>
+                    <button class="lnk" onClick="{{clearSel}}">Deselect</button>
+                  </div>
+                </sc-if>
+                <div style="border-top: 1px solid #212327; padding-top: 10px; display: flex; align-items: center; gap: 8px">
+                  <sc-if value="{{capOff}}" hint-placeholder-val="{{true}}"><button class="btn" style="flex: 1; text-align: center; border-color: #F5A11D" onClick="{{buildCaps}}">Show as captions</button></sc-if>
+                  <sc-if value="{{capOn}}" hint-placeholder-val="{{false}}"><span class="muted" style="flex: 1; font-size: 12px">{{capSummary}}</span><button class="lnk" style="font-size: 12px; color: #F5A11D" onClick="{{toCapStyle}}">Style →</button></sc-if>
+                </div>
+              </sc-if>
+            </sc-if>
+            <sc-if value="{{lText}}" hint-placeholder-val="{{false}}">
+              <span class="h">Text on the video</span>
+              <div style="background: #212327; border: 1px solid #50545A; border-radius: 10px; padding: 10px"><textarea style="height: 60px" value="{{titleWords}}" onChange="{{onTitleWords}}" aria-label="Text on the video"></textarea></div>
+              <span class="muted" style="font-size: 12px">Lands at the playhead</span>
+              <sc-for list="{{presets}}" as="p" hint-placeholder-count="3">
+                <button class="btn" style="display: flex; flex-direction: column; gap: 2px" onClick="{{p.add}}"><span>Aa {{p.name}}</span><span class="muted" style="font-size: 11px">{{p.sum}}</span></button>
+              </sc-for>
+            </sc-if>
+          </div>
+
+          <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; background: #0F1012">
+            <div style="{{frame}}">
+              <div style="position: absolute; inset: 0; background: radial-gradient(circle at 50% 58%, rgba(240,228,206,.20), transparent 40%)"></div>
+              <sc-if value="{{frameRec}}" hint-placeholder-val="{{false}}">
+                <div style="position: absolute; left: 39%; top: 24%; width: 22%; aspect-ratio: 1; border-radius: 50%; background: #c9cfe6; opacity: .55"></div>
+                <div style="position: absolute; left: 27%; bottom: 0; width: 46%; height: 34%; border-radius: 50% 50% 0 0; background: #c9cfe6; opacity: .45"></div>
+              </sc-if>
+              <sc-if value="{{frameHasHook}}" hint-placeholder-val="{{false}}"><div style="position: absolute; left: 0; right: 0; top: 30px; text-align: center; padding: 0 12px"><span style="font-size: 15px; font-weight: 800; color: #fff; background: rgba(11,12,14,.72); padding: 4px 8px; border-radius: 6px; line-height: 1.6; box-decoration-break: clone; -webkit-box-decoration-break: clone">{{frameHook}}</span></div></sc-if>
+              <sc-if value="{{frameHasTitle}}" hint-placeholder-val="{{false}}"><div style="position: absolute; left: 0; right: 0; top: 40%; text-align: center; font-size: 26px; font-weight: 700; color: #fff; text-shadow: 0 2px 8px rgba(0,0,0,.6)">{{frameTitle}}</div></sc-if>
+              <sc-if value="{{frameHasCap}}" hint-placeholder-val="{{false}}"><div style="{{frameCapWrap}}"><span style="{{frameCapStyle}}">{{frameCap}}</span></div></sc-if>
+            </div>
+            <span class="muted" style="font-size: 12px">{{frameLabel}}</span>
+          </div>
+        </div>
+
+        <div style="height: 236px; flex: none; border-top: 1px solid #34373B; background: #0F1012; display: flex; flex-direction: column">
+          <div style="height: 36px; flex: none; display: flex; align-items: center; gap: 6px; padding: 0 14px">
+            <span class="muted" style="font-size: 12px">Click the ruler to move the playhead · select a clip for Split, Duplicate and Delete</span>
+            <div style="flex: 1"></div>
+            <span style="font-size: 12px">{{playTC}} / {{editTC}}</span>
+          </div>
+          <div style="height: 22px; flex: none; display: flex"><div style="width: 110px"></div><div class="muted" style="flex: 1; display: flex; justify-content: space-between; padding-right: 16px; font-size: 11px"><sc-for list="{{ticks}}" as="t" hint-placeholder-count="6"><button class="lnk" style="font-size: 11px" onClick="{{t.go}}">{{t.label}}</button></sc-for></div></div>
+          <div style="flex: 1; position: relative; display: flex; flex-direction: column; gap: 6px; padding-bottom: 8px">
+            <div style="height: 40px; display: flex; align-items: center"><span style="width: 110px; padding-left: 14px; box-sizing: border-box"><span style="color: #7C5CFF">●</span> TEXT</span>
+              <div style="flex: 1; margin-right: 16px; height: 36px; position: relative">
+                <sc-for list="{{titleClips}}" as="t" hint-placeholder-count="0"><button style="{{t.style}}" onClick="{{t.pick}}">Aa {{t.words}}</button></sc-for>
+              </div>
+            </div>
+            <div style="height: 64px; display: flex; align-items: center"><span style="width: 110px; padding-left: 14px; box-sizing: border-box"><span style="color: #F5A11D">●</span> VIDEO</span>
+              <div style="flex: 1; margin-right: 16px; position: relative; height: 60px">
+                <sc-for list="{{vidClips}}" as="c" hint-placeholder-count="2"><button style="{{c.style}}" onClick="{{c.pick}}">{{c.label}}</button></sc-for>
+              </div>
+            </div>
+            <sc-if value="{{cardMode}}" hint-placeholder-val="{{false}}">
+              <div style="{{anchorBox}}"><span style="position: absolute; left: 4px; top: 2px; font-size: 10px; color: #F5A11D; white-space: nowrap">◆ {{anchorA}}</span><span style="position: absolute; right: 4px; bottom: 2px; font-size: 10px; color: #F5A11D; white-space: nowrap">{{anchorB}} ◆</span></div>
+            </sc-if>
+            <div style="position: absolute; top: 0; bottom: 0; width: 2px; background: #F5A11D; pointer-events: none; left: {{playheadX}}px"></div>
+            <sc-if value="{{showBar}}" hint-placeholder-val="{{false}}">
+              <div style="{{barStyle}}">
+                <sc-for list="{{barItems}}" as="b" hint-placeholder-count="5">
+                  <sc-if value="{{b.sep}}" hint-placeholder-val="{{false}}"><span style="width: 1px; height: 20px; background: #50545A; margin: 0 4px"></span></sc-if>
+                  <sc-if value="{{b.notSep}}" hint-placeholder-val="{{true}}"><button style="{{b.style}}" onClick="{{b.run}}" title="{{b.tip}}">{{b.label}}</button></sc-if>
+                </sc-for>
+              </div>
+            </sc-if>
+          </div>
+        </div>
+      </div>
+
+      <div style="width: 300px; flex: none; border-left: 1px solid #34373B; background: #131416; padding: 12px; display: flex; flex-direction: column; gap: 10px; box-sizing: border-box; overflow: hidden">
+        <div style="display: flex; background: #1A1B1E; border: 1px solid #34373B; border-radius: 8px; padding: 2px">
+          <sc-for list="{{rightTabs}}" as="t" hint-placeholder-count="2"><button style="{{t.style}}" onClick="{{t.pick}}">{{t.label}}</button></sc-for>
+        </div>
+        <sc-if value="{{rCaps}}" hint-placeholder-val="{{false}}">
+          <sc-if value="{{capOff}}" hint-placeholder-val="{{false}}">
+            <div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; text-align: center; padding: 0 12px">
+              <span style="font-weight: 700">No captions yet</span>
+              <span class="muted" style="line-height: 1.5">{{capEmptyBody}}</span>
+              <sc-if value="{{trDone}}" hint-placeholder-val="{{false}}"><button class="btn" style="text-align: center; border-color: #F5A11D" onClick="{{buildCaps}}">Show the transcript as captions</button></sc-if>
+            </div>
+          </sc-if>
+          <sc-if value="{{capOn}}" hint-placeholder-val="{{false}}">
+            <div class="row"><span class="h">Burn into the video</span><button style="{{burnStyle}}" onClick="{{toggleBurn}}" aria-label="Burn captions into the video"><span style="{{burnKnob}}"></span></button></div>
+            <span class="muted" style="font-size: 11px; line-height: 1.4">{{burnNote}}</span>
+            <span class="h" style="margin-top: 4px">Style</span>
+            <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px">
+              <sc-for list="{{capCards}}" as="c" hint-placeholder-count="6">
+                <button style="{{c.wrap}}" onClick="{{c.pick}}" aria-pressed="{{c.on}}">
+                  <span style="{{c.frame}}"><span style="{{c.textWrap}}"><span style="{{c.css}}">{{c.sample}}</span></span></span>
+                  <span style="{{c.labelStyle}}">{{c.label}}</span>
+                </button>
+              </sc-for>
+            </div>
+            <span class="h" style="margin-top: 4px">Size</span>
+            <div style="display: flex; background: #1A1B1E; border: 1px solid #34373B; border-radius: 8px; padding: 2px">
+              <sc-for list="{{capSizes}}" as="c" hint-placeholder-count="3"><button style="{{c.style}}" onClick="{{c.pick}}">{{c.label}}</button></sc-for>
+            </div>
+            <span class="h" style="margin-top: 4px">Position</span>
+            <div style="display: flex; background: #1A1B1E; border: 1px solid #34373B; border-radius: 8px; padding: 2px">
+              <sc-for list="{{capPositions}}" as="c" hint-placeholder-count="3"><button style="{{c.style}}" onClick="{{c.pick}}">{{c.label}}</button></sc-for>
+            </div>
+            <span class="muted" style="font-size: 11px; line-height: 1.4">The preview in the middle shows the change right away.</span>
+          </sc-if>
+        </sc-if>
+        <sc-if value="{{rInspNone}}" hint-placeholder-val="{{true}}">
+          <span class="h">Project</span>
+          <div class="row"><span class="muted">Size</span><span>1920 × 1080 · 16:9</span></div>
+          <div class="row"><span class="muted">Length</span><span>{{editMMSS}}</span></div>
+          <span class="muted" style="font-size: 12px; line-height: 1.5; margin-top: 8px">Select a clip to see where it came from. That's all you need here — position, scale and colour stay out of the way.</span>
+        </sc-if>
+        <sc-if value="{{rInspClip}}" hint-placeholder-val="{{false}}">
+          <span class="h" style="font-size: 15px">{{clipName}}</span>
+          <span><span class="{{clipBadgeClass}}">{{clipBadge}}</span></span>
+          <span class="muted" style="font-size: 12px; line-height: 1.45">{{clipAbout}}</span>
+          <sc-if value="{{clipIsGen}}" hint-placeholder-val="{{false}}"><button class="lnk" style="text-align: left; color: #F5A11D" onClick="{{toGen}}">Refine in Generate →</button></sc-if>
+          <div class="row" style="margin-top: 6px"><span class="muted">Starts at</span><span>{{clipStart}}</span></div>
+          <div class="row"><span class="muted">Length</span><span>{{clipDur}}</span></div>
+          <div style="flex: 1"></div>
+          <button class="lnk" style="text-align: left; font-size: 12px" onClick="{{deselect}}">‹ Project</button>
+        </sc-if>
+        <sc-if value="{{rClips}}" hint-placeholder-val="{{false}}">
+          <sc-if value="{{rpNoRec}}" hint-placeholder-val="{{false}}">
+            <div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; text-align: center; padding: 0 12px">
+              <span style="font-weight: 700">Clips come from a longer video</span>
+              <span class="muted" style="line-height: 1.5">Import a video where someone talks. BeeRoll suggests short vertical Clips from what is said.</span>
+            </div>
+          </sc-if>
+          <sc-if value="{{rpNeedTr}}" hint-placeholder-val="{{false}}">
+            <div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; text-align: center; padding: 0 12px">
+              <span style="font-weight: 700">Transcribe first</span>
+              <span class="muted" style="line-height: 1.5">Clips are found in the transcript. It runs on your Mac and costs nothing.</span>
+              <button class="btn" style="text-align: center" onClick="{{rpTranscribe}}">Transcribe</button>
+            </div>
+          </sc-if>
+          <sc-if value="{{rpReady}}" hint-placeholder-val="{{false}}">
+            <div style="flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 14px">
+              <span style="font-size: 15px; font-weight: 700; line-height: 1.4">Find 3–5 vertical Clips in {{recLen}} of video</span>
+              <span class="muted" style="line-height: 1.5">Each is 15–60 s, cut on whole sentences, with a hook line. Keep the ones you like.</span>
+              <button class="pri" style="text-align: center" onClick="{{rpGo}}">◆ Find clips · {{rpCost}}</button>
+              <span class="muted" style="font-size: 11px">Reads the text only. Prototype figure — not measured yet.</span>
+            </div>
+          </sc-if>
+          <sc-if value="{{rpRunning}}" hint-placeholder-val="{{false}}">
+            <div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px">
+              <span>Reading the transcript {{rpP}}%</span>
+              <div style="width: 200px; height: 4px; background: #50545A; border-radius: 2px"><div style="{{rpBar}}"></div></div>
+            </div>
+          </sc-if>
+          <sc-if value="{{rpDone}}" hint-placeholder-val="{{false}}">
+            <div style="flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding-right: 2px">
+              <sc-for list="{{cards}}" as="c" hint-placeholder-count="3">
+                <sc-if value="{{c.shown}}" hint-placeholder-val="{{true}}">
+                  <div style="{{c.wrap}}">
+                    <button style="{{c.thumb}}" onClick="{{c.pick}}" aria-label="Show this Clip"><span style="{{c.bar}}"></span></button>
+                    <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 5px">
+                      <button class="lnk" style="{{c.hookStyle}}" onClick="{{c.pick}}">{{c.hook}}</button>
+                      <span class="muted" style="font-size: 11px">{{c.range}}</span>
+                      <sc-if value="{{c.isNew}}" hint-placeholder-val="{{true}}">
+                        <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap">
+                          <button class="btn" style="padding: 3px 9px; border-color: #F5A11D" onClick="{{c.keep}}">Keep</button>
+                          <button class="btn" style="padding: 3px 9px" onClick="{{c.discard}}">Discard</button>
+                          <button class="lnk" style="font-size: 12px" onClick="{{c.reroll}}">↻ · {{rrCost}}</button>
+                        </div>
+                      </sc-if>
+                      <sc-if value="{{c.isKept}}" hint-placeholder-val="{{false}}">
+                        <span style="font-size: 11px; color: #7AA578">✓ Kept · 9:16</span>
+                        <span style="display: flex; gap: 12px"><button class="lnk" style="font-size: 12px; color: #F5A11D" onClick="{{c.preview}}">▶ Preview</button><button class="lnk" style="font-size: 12px" onClick="{{c.undo}}">Undo</button></span>
+                      </sc-if>
+                      <sc-if value="{{c.isBusy}}" hint-placeholder-val="{{false}}"><span style="font-size: 11px; color: #FFD475">Re-rolling {{c.rr}}%</span></sc-if>
+                    </div>
+                  </div>
+                </sc-if>
+                <sc-if value="{{c.gone}}" hint-placeholder-val="{{false}}">
+                  <div class="row" style="padding: 4px 8px; font-size: 12px"><span class="muted" style="text-decoration: line-through; overflow: hidden; white-space: nowrap; text-overflow: ellipsis">{{c.hook}}</span><button class="lnk" style="font-size: 12px" onClick="{{c.undo}}">Undo</button></div>
+                </sc-if>
+              </sc-for>
+            </div>
+            <div style="border-top: 1px solid #212327; padding-top: 10px; display: flex; flex-direction: column; gap: 6px">
+              <span class="muted" style="font-size: 12px">{{keptLine}}</span>
+              <button class="pri" style="{{expKeptStyle}}" onClick="{{expKept}}">Export {{keptN}} Clips</button>
+            </div>
+          </sc-if>
+        </sc-if>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{hasToast}}" hint-placeholder-val="{{false}}">
+    <div style="position: absolute; top: 62px; left: 50%; transform: translateX(-50%); z-index: 10; display: flex; gap: 12px; align-items: center; background: #2A2C30; border: 1px solid #50545A; border-radius: 8px; padding: 7px 12px; box-shadow: 0 10px 28px rgba(0,0,0,.5)">
+      <span style="{{toastStyle}}">{{toast}}</span>
+      <button class="lnk" style="font-size: 12px" onClick="{{ackToast}}">OK</button>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{pvOn}}" hint-placeholder-val="{{false}}">
+    <div style="position: absolute; inset: 0; z-index: 30; background: #050506; display: flex; flex-direction: column" onKeyDown="{{pvKey}}">
+      <div style="height: 52px; flex: none; display: flex; align-items: center; gap: 14px; padding: 0 20px">
+        <span style="width: 220px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis">Preview · {{pvWhat}}</span>
+        <div style="flex: 1; display: flex; justify-content: center">
+          <div style="display: flex; background: #1A1B1E; border: 1px solid #34373B; border-radius: 8px; padding: 2px; max-width: 760px; overflow: hidden">
+            <sc-for list="{{pvSources}}" as="o" hint-placeholder-count="2"><button style="{{o.style}}" onClick="{{o.pick}}">{{o.label}}</button></sc-for>
+          </div>
+        </div>
+        <div style="display: flex; background: #1A1B1E; border: 1px solid #34373B; border-radius: 8px; padding: 2px">
+          <sc-for list="{{pvAspects}}" as="o" hint-placeholder-count="2"><button style="{{o.style}}" onClick="{{o.pick}}">{{o.label}}</button></sc-for>
+        </div>
+        <button class="lnk" data-pv-close="1" onClick="{{pvClose}}" title="Close preview (Esc)">Esc ✕</button>
+      </div>
+      <div style="flex: 1; min-height: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px">
+        <div style="{{pvFrame}}">
+          <div style="{{pvInner}}"></div>
+          <sc-if value="{{pvRec}}" hint-placeholder-val="{{false}}">
+            <div style="position: absolute; left: 39%; top: 24%; width: 22%; aspect-ratio: 1; border-radius: 50%; background: #c9cfe6; opacity: .55"></div>
+            <div style="position: absolute; left: 27%; bottom: 0; width: 46%; height: 34%; border-radius: 50% 50% 0 0; background: #c9cfe6; opacity: .45"></div>
+          </sc-if>
+          <sc-if value="{{pvHasHook}}" hint-placeholder-val="{{false}}"><div style="{{pvHookWrap}}"><span style="{{pvHookStyle}}">{{pvHook}}</span></div></sc-if>
+          <sc-if value="{{pvHasTitle}}" hint-placeholder-val="{{false}}"><div style="position: absolute; left: 0; right: 0; top: 42%; text-align: center; font-size: 40px; font-weight: 700; color: #fff; text-shadow: 0 2px 10px rgba(0,0,0,.6)">{{pvTitle}}</div></sc-if>
+          <sc-if value="{{pvHasCap}}" hint-placeholder-val="{{false}}"><div style="{{pvCapWrap}}"><span style="{{pvCapStyle}}">{{pvCap}}</span></div></sc-if>
+        </div>
+        <span class="muted" style="font-size: 12px; height: 16px">{{pvNote}}</span>
+      </div>
+      <div style="height: 84px; flex: none; display: flex; align-items: center; gap: 14px; padding: 0 28px; border-top: 1px solid #17181B">
+        <button class="lnk" style="font-size: 13px" onClick="{{pvBack}}" title="Back 5 s">◁ 5</button>
+        <button style="width: 40px; height: 40px; border: 0; border-radius: 10px; background: #ECEAE4; color: #17160F; font: inherit; font-size: 15px; cursor: pointer" onClick="{{pvToggle}}" title="Play / Pause (Space)">{{pvPlayIcon}}</button>
+        <button class="lnk" style="font-size: 13px" onClick="{{pvFwd}}" title="Forward 5 s">5 ▷</button>
+        <div data-scrub="1" style="flex: 1; height: 24px; display: flex; align-items: center; cursor: pointer" onClick="{{pvScrub}}">
+          <div style="flex: 1; height: 4px; background: #34373B; border-radius: 2px; position: relative; pointer-events: none"><div style="{{pvFill}}"></div><div style="{{pvKnob}}"></div></div>
+        </div>
+        <span style="width: 110px; text-align: right">{{pvTC}}</span>
+        <div style="width: 300px; display: flex; justify-content: flex-end; align-items: center; gap: 10px">
+          <span style="{{pvExpStyle}}">{{pvExpText}}</span>
+          <sc-if value="{{pvCanExport}}" hint-placeholder-val="{{true}}"><button class="pri" style="font-size: 13px; padding: 8px 16px" onClick="{{pvExport}}">Export this</button></sc-if>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{hasModal}}" hint-placeholder-val="{{false}}">
+    <div style="position: absolute; inset: 0; z-index: 20; background: rgba(0,0,0,.55); display: flex; align-items: center; justify-content: center">
+      <div style="width: 420px; background: #1A1B1E; border: 1px solid #50545A; border-radius: 14px; padding: 22px; display: flex; flex-direction: column; gap: 12px; box-shadow: 0 20px 60px rgba(0,0,0,.6)">
+        <span style="font-size: 15px; font-weight: 700; color: #FFD60A">You're out of AI credits</span>
+        <span style="line-height: 1.5">This needs about {{mCost}} credits and you have {{creditsText}}. Your project and versions are safe.</span>
+        <span class="muted" style="font-size: 12px">In the prototype, Get credits adds 10,000.</span>
+        <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 6px"><button class="btn" onClick="{{mClose}}">Not now</button><button class="pri" style="font-size: 13px; padding: 8px 16px" onClick="{{mTopUp}}">Get credits</button></div>
+      </div>
+    </div>
+  </sc-if>
+</div>
+</template>
+<script>
+(function () {
+  'use strict';
+  // Minimal runtime for .dc.html templates: {{path}} holes, <sc-if>, <sc-for>, on* events, value props.
+  class DCLogic {
+    constructor(props) { this.props = props || {}; this.state = {}; this.__queued = false; }
+    setState(patch) {
+      const p = typeof patch === 'function' ? patch(this.state, this.props) : patch;
+      this.state = Object.assign({}, this.state, p);
+      if (!this.__queued && this.__render) { this.__queued = true; Promise.resolve().then(() => { this.__queued = false; this.__render(); }); }
+    }
+  }
+  window.DCLogic = DCLogic;
+
+  const EVENTS = { onclick: 'click', onchange: 'input', oninput: 'input', onkeydown: 'keydown', onkeyup: 'keyup', ondragover: 'dragover', ondragleave: 'dragleave', ondrop: 'drop', onfocus: 'focus', onblur: 'blur' };
+  const HOLE = /\{\{\s*([^}]+?)\s*\}\}/g;
+  const SVG_NS = 'http://www.w3.org/2000/svg';
+
+  function lookup(path, scope) {
+    if (path === 'true') return true;
+    if (path === 'false') return false;
+    const parts = path.split('.');
+    let v = scope;
+    for (let i = 0; i < parts.length; i++) { if (v == null) return undefined; v = v[parts[i]]; }
+    return v;
+  }
+  function interp(str, scope) {
+    const whole = str.match(/^\{\{\s*([^}]+?)\s*\}\}$/);
+    if (whole) return lookup(whole[1], scope);
+    return str.replace(HOLE, (_, p) => { const v = lookup(p, scope); return v == null || v === false ? '' : String(v); });
+  }
+
+  // Template DOM → virtual nodes. Every node gets a key (template node id + loop index) so patching keeps identity.
+  const ids = new WeakMap(); let nextId = 1;
+  const uid = (n) => { let k = ids.get(n); if (!k) { k = nextId++; ids.set(n, k); } return k; };
+  function build(node, scope, out, kp) {
+    kp = kp || '';
+    if (node.nodeType === 3) { out.push({ key: kp + uid(node), text: interp(node.nodeValue, scope) }); return; }
+    if (node.nodeType !== 1) return;
+    const tag = node.localName;
+    if (tag === 'sc-if') {
+      if (lookup((node.getAttribute('value') || '').replace(/^\{\{\s*|\s*\}\}$/g, ''), scope)) node.childNodes.forEach((c) => build(c, scope, out, kp));
+      return;
+    }
+    if (tag === 'sc-for') {
+      const list = lookup((node.getAttribute('list') || '').replace(/^\{\{\s*|\s*\}\}$/g, ''), scope) || [];
+      const as = node.getAttribute('as') || 'item';
+      const fk = kp + uid(node) + ':';
+      list.forEach((item, i) => { const sc = Object.create(scope); sc[as] = item; sc.$index = i; node.childNodes.forEach((c) => build(c, sc, out, fk + i + '/')); });
+      return;
+    }
+    const v = { key: kp + uid(node), tag, ns: node.namespaceURI, attrs: {}, events: {}, value: undefined, children: [] };
+    for (const a of node.attributes) {
+      const n = a.name;
+      if (n.indexOf('hint-') === 0) continue;
+      if (EVENTS[n]) { const fn = interp(a.value, scope); if (typeof fn === 'function') v.events[EVENTS[n]] = fn; continue; }
+      const val = interp(a.value, scope);
+      if (n === 'value' && (tag === 'textarea' || tag === 'input' || tag === 'select')) { v.value = val == null ? '' : String(val); continue; }
+      if (val == null || val === false) continue;
+      v.attrs[n] = val === true ? '' : String(val);
+    }
+    node.childNodes.forEach((c) => build(c, scope, v.children, kp));
+    out.push(v);
+  }
+
+  // Patch real DOM in place, by position.
+  function create(v) {
+    if ('text' in v) { const tn = document.createTextNode(v.text == null ? '' : String(v.text)); tn.__k = v.key; return tn; }
+    const el = v.ns === SVG_NS ? document.createElementNS(SVG_NS, v.tag) : document.createElement(v.tag);
+    el.__h = {}; el.__k = v.key;
+    update(el, v);
+    return el;
+  }
+  function same(el, v) {
+    if ('text' in v) return el.nodeType === 3;
+    return el.nodeType === 1 && el.localName === v.tag;
+  }
+  function update(el, v) {
+    if ('text' in v) { const t = v.text == null ? '' : String(v.text); if (el.nodeValue !== t) el.nodeValue = t; return; }
+    for (const a of Array.from(el.attributes)) if (!(a.name in v.attrs)) el.removeAttribute(a.name);
+    for (const n in v.attrs) if (el.getAttribute(n) !== v.attrs[n]) el.setAttribute(n, v.attrs[n]);
+    const h = el.__h || (el.__h = {});
+    for (const type in v.events) {
+      if (!(type in h)) el.addEventListener(type, (e) => { const f = el.__h[type]; if (f) f(e); });
+      h[type] = v.events[type];
+    }
+    for (const type in h) if (!(type in v.events)) h[type] = null;
+    if (v.value !== undefined && el.value !== v.value) el.value = v.value;
+    patchChildren(el, v.children);
+  }
+  function patchChildren(parent, kids) {
+    const byKey = new Map();
+    const want = new Set(kids.map((v) => v.key));
+    // Drop nodes that are gone first, so the ones that stay never move (moving a focused field blurs it).
+    Array.from(parent.childNodes).forEach((n) => { if (n.__k != null && want.has(n.__k)) byKey.set(n.__k, n); else parent.removeChild(n); });
+    let i = 0;
+    for (; i < kids.length; i++) {
+      const v = kids[i];
+      let el = byKey.get(v.key);
+      if (el && !same(el, v)) el = null;
+      if (el) { byKey.delete(v.key); update(el, v); } else el = create(v);
+      const at = parent.childNodes[i];
+      if (at !== el) parent.insertBefore(el, at || null);
+    }
+    while (parent.childNodes.length > kids.length) parent.removeChild(parent.lastChild);
+  }
+
+
+  window.mountDC = function (Component, tpl, mount, props) {
+    const comp = new Component(props || {});
+    const roots = Array.from(tpl.content.childNodes);
+    comp.__render = function () {
+      const vals = comp.renderVals();
+      const out = [];
+      roots.forEach((n) => build(n, vals, out));
+      patchChildren(mount, out);
+    };
+    comp.__render();
+    if (comp.componentDidMount) comp.componentDidMount();
+    return comp;
+  };
+})();
+
+</script>
+<script>
+
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = this.fresh(this.props.demo === true);
+  }
+  get MODELS() {
+    return [
+      { label: 'Sora 2 · Draft', name: 'Sora 2', sub: 'Draft', rate: 125, lens: [4, 8, 12], img: true },
+      { label: 'Sora 2 Pro · Best', name: 'Sora 2 Pro', sub: 'Best', rate: 375, lens: [4, 8, 12], img: true },
+      { label: 'Veo 3 Fast · text only', name: 'Veo 3 Fast', sub: 'Fast', rate: 150, lens: [4, 8], img: false }
+    ];
+  }
+  // Keys that belong to one project's edit; everything else (generated videos, credits) is shared.
+  blankProject(name) { return { name, order: [], rec: false, tl: null, selClip: -1, selTitle: -1, play: 0, leftTab: 'media', rightTab: 'inspector',
+    tr: 'none', trP: 0, wsel: [], struck: [], caps: false, capPreset: 1, capSize: 1, capPos: 'bottom', burn: true, titles: [], titleWords: '',
+    rp: 'none', rpP: 0, cards: [], selCard: -1, pv: null, exp: null }; }
+  snapProject(st) { const b = this.blankProject(''); const o = {}; Object.keys(b).forEach((k) => { o[k] = st[k]; }); return o; }
+  fresh(seed) {
+    const p = 'Two friends play padel at sunset. One serves, the other laughs and returns it.';
+    const base = { tab: 'gen', name: '', credits: 10000, toast: '', toastT: 0, modal: null, drag: false,
+      prompt: p, img: null, model: 0, len: 8,
+      vers: [], cur: 0, vseq: 0, genCount: 0, editText: null, editImg: undefined, compare: false,
+      order: [], rec: false, tl: null, selClip: -1, selTitle: -1, play: 12, leftTab: 'media', rightTab: 'inspector',
+      tr: 'none', trP: 0, wsel: [], struck: [], caps: false, capPreset: 1, capSize: 1, capPos: 'bottom', burn: true, titles: [], titleWords: 'Padel at sunset',
+      rp: 'none', rpP: 0, cards: [], selCard: -1, pv: null, exp: null, dis: [], mode: 'change', newText: '', newImg: '', verMenu: -1, q: '', projMenu: false, addMenu: false, projId: 'p0', projSeq: 2, genName: '',
+      projects: { p1: this.blankProject('Beach trip'), p2: this.blankProject('Product demo') } };
+    if (!seed) return base;
+    const img = { name: 'padel-friends.jpg' };
+    return { ...base, name: 'Padel at sunset', genName: 'Padel at sunset', img,
+      vers: [
+        { name: 'v1', what: 'First take · 8 s', d: 8, g: 1, p: 100, kind: 'paid', cost: '1,000', costN: 1000, text: p, img: img.name, model: 0, from: '' },
+        { name: 'v2', what: 'Slow zoom in', d: 8, g: 1, p: 100, kind: 'free', cost: 'free', text: p, img: img.name, model: 0, from: 'v1', zoom: true }
+      ], cur: 1, vseq: 2, genCount: 1, credits: 9000, order: ['gen'] };
+  }
+  componentDidMount() { this.timer = setInterval(() => this.tick(), 150); }
+  componentWillUnmount() { clearInterval(this.timer); }
+  tick() {
+    const s = this.state;
+    let ch = false;
+    const patch = {};
+    if (s.vers.some((v) => v.p < 100 && !v.status)) {
+      ch = true;
+      patch.vers = s.vers.map((v) => { if (v.p < 100 && !v.status) { const np = Math.min(100, v.p + 3); if (v.failAt && np >= v.failAt) return { ...v, p: v.failAt, status: 'failed' }; return { ...v, p: np }; } return v; });
+    }
+    if (s.tr === 'running') { ch = true; patch.trP = Math.min(100, s.trP + 3); if (patch.trP >= 100) patch.tr = 'done'; }
+    if (s.rp === 'running') { ch = true; patch.rpP = Math.min(100, s.rpP + 4); if (patch.rpP >= 100) { patch.rp = 'done'; patch.cards = this.CLIPS.map((_, k) => ({ k, v: 0, st: 'new', rr: 100 })); patch.selCard = 0; } }
+    if (s.cards.some((c) => c.rr < 100)) { ch = true; patch.cards = s.cards.map((c) => c.rr < 100 ? { ...c, rr: Math.min(100, c.rr + 5), v: c.rr + 5 >= 100 ? (c.v + 1) % (this.CLIPS[c.k].alts.length + 1) : c.v } : c); }
+    if (s.pv && s.pv.playing) { ch = true; const t = Math.min(s.pv.len, s.pv.t + 0.15); patch.pv = { ...s.pv, t, playing: t < s.pv.len }; }
+    if (s.pv && typeof s.pv.exp === 'number') { ch = true; patch.pv = { ...(patch.pv || s.pv), exp: s.pv.exp + 4 >= 100 ? 'done' : s.pv.exp + 4 }; }
+    if (typeof s.exp === 'number') { ch = true; if (s.exp + 4 >= 100) { patch.exp = null; patch.toast = '✓ Exported ' + s.expWhat + ' to Movies › BeeRoll'; patch.toastT = 40; } else patch.exp = s.exp + 4; }
+    if (s.toastT > 0 && !('toastT' in patch)) { ch = true; patch.toastT = s.toastT - 1; if (patch.toastT === 0) patch.toast = ''; }
+    if (ch) this.setState(patch);
+  }
+  get CLIPS() {
+    return [
+      { hook: 'Stop opening apps from the Dock', a: 0, b: 2, alts: [{ hook: 'Command-Space beats the Dock', a: 1, b: 2 }] },
+      { hook: 'Your Mac has a calculator you never open', a: 3, b: 4, alts: [{ hook: 'Do maths without opening an app', a: 3, b: 3 }] },
+      { hook: 'Find every file one person sent you', a: 5, b: 6, alts: [{ hook: 'Search by person, not by folder', a: 5, b: 5 }] },
+      { hook: 'Two keys that skip opening the file', a: 6, b: 7, alts: [{ hook: 'Peek at a file without opening it', a: 7, b: 7 }] },
+      { hook: 'Make Spotlight results less noisy', a: 8, b: 9, alts: [{ hook: 'Five keys and the Dock is optional', a: 7, b: 9 }] }
+    ];
+  }
+  get SEGS() {
+    return [
+      [0, 'Most people still open apps from the Dock, and it costs them minutes every day.'],
+      [17, 'Instead, um, press Command-Space and start typing the first letters.'],
+      [35, 'Hit Return and the app opens. You never touch the mouse.'],
+      [52, 'Spotlight also does maths, so you can type 18 percent of 240 right there.'],
+      [70, 'It converts units and currencies too — try 30 euros in dollars.'],
+      [87, "Here's the one nobody uses: type a person's name to find every file they sent you."],
+      [105, 'Press Command-Return to show the file in Finder instead of opening it.'],
+      [123, 'And, uh, Command-I on a result shows its info without opening anything.'],
+      [141, 'If results are noisy, turn off categories in System Settings, Spotlight.'],
+      [160, "That's it. Five keys, and the Dock becomes optional. Follow for more."]
+    ];
+  }
+  mmss(sec) { const v = Math.max(0, Math.round(sec)); return Math.floor(v / 60) + ':' + String(v % 60).padStart(2, '0'); }
+  tc(sec) { const v = Math.max(0, sec); const h = Math.floor(v / 3600), m = Math.floor(v / 60) % 60, x = Math.floor(v) % 60, f = Math.floor((v % 1) * 24); return [h, m, x, f].map((n) => String(n).padStart(2, '0')).join(':'); }
+  recG(k) { const g = ['linear-gradient(160deg,#1b1f2e,#3d4a7a 65%,#8a98c8)', 'linear-gradient(160deg,#1d2430,#3f5d74 65%,#88aac0)', 'linear-gradient(160deg,#211d2e,#55457a 65%,#a596c8)', 'linear-gradient(160deg,#1a2428,#3b6466 65%,#86b6b0)', 'linear-gradient(160deg,#25202a,#5c4a62 65%,#b294b4)']; return g[k % g.length]; }
+  G(i) {
+    if (i === 'rec') return 'linear-gradient(135deg,#1b1f2e,#3d4a7a 70%,#8a98c8)';
+    const g = ['linear-gradient(135deg,#1f3326,#4f7a46 65%,#d8b36a)', 'linear-gradient(160deg,#3a2414,#b0662e 60%,#f0b468)', 'linear-gradient(135deg,#1f2b38,#4b6a86 70%,#a7b8c4)', 'linear-gradient(160deg,#2b1f1f,#8a4f3a 65%,#e8a070)', 'linear-gradient(135deg,#26231f,#5a5246 70%,#8c7d66)', 'linear-gradient(160deg,#3a2a1c,#7a4b23 60%,#d8a868)'];
+    return g[((i % g.length) + g.length) % g.length];
+  }
+  fmt(n) { return n.toLocaleString('en-US'); }
+  spend(c) { this.setState({ credits: Math.max(0, this.state.credits - c) }); }
+  say(t) { this.setState({ toast: t, toastT: 30 }); }
+  renderVals() {
+    const s = this.state;
+    const M = this.MODELS;
+    const model = M[s.model];
+    const rate = model.rate;
+    const cl = (n) => 'about ' + this.fmt(n);
+    const charge = (cost, run) => { if (cost > this.state.credits) { this.setState({ modal: { cost } }); return; } this.spend(cost); run(); };
+    const seg = (on) => 'font:inherit;font-size:12px;cursor:pointer;border:0;border-radius:6px;padding:5px 10px;white-space:nowrap;' + (on ? 'background:#50545A;color:#ECEAE4' : 'background:transparent;color:#9A978F');
+    const tab3 = (on) => 'flex:1;font:inherit;font-size:12px;cursor:pointer;border:0;border-radius:6px;padding:5px 2px;' + (on ? 'background:#F5A11D;color:#17160F' : 'background:transparent;color:#ECEAE4');
+    const tabStyle = (on) => 'font:inherit;cursor:pointer;border:0;border-radius:6px;padding:5px 22px;' + (on ? 'background:#F5A11D;color:#17160F' : 'background:transparent;color:#ECEAE4');
+    const bar = (p) => p < 100 ? 'position:absolute;left:0;bottom:0;height:3px;background:#FFD475;width:' + p + '%' : 'display:none';
+    const sw = (on) => 'width:34px;height:20px;border:0;border-radius:10px;position:relative;cursor:pointer;background:' + (on ? '#F5A11D' : '#50545A');
+    const knob = (on) => 'position:absolute;top:2px;width:16px;height:16px;border-radius:50%;background:#17160F;' + (on ? 'right:2px' : 'left:2px');
+    const SAMPLE = 'padel-friends.jpg';
+
+    // Models and lengths: only lengths the model can make.
+    const pickModel = (i) => {
+      const m = M[i];
+      const st = this.state;
+      if (m.lens.includes(st.len)) { this.setState({ model: i }); return; }
+      const snap = m.lens.reduce((a, b) => Math.abs(b - st.len) < Math.abs(a - st.len) ? b : a);
+      this.setState({ model: i, len: snap });
+      this.say(m.name + ' makes ' + m.lens.join(' or ') + ' s — set to ' + snap + ' s');
+    };
+    const modelOpts = M.map((m, i) => ({ name: m.name, sub: m.sub, check: s.model === i ? '✓' : '',
+      detail: m.rate + ' credits per second · ' + m.lens.join(' / ') + ' s',
+      photo: m.img ? 'Starts from your photo' : 'Text only — ignores photos', photoStyle: 'font-size:11px;' + (m.img ? 'color:#7AA578' : 'color:#FFD475'),
+      style: 'font:inherit;color:#ECEAE4;text-align:left;cursor:pointer;border:0;border-radius:8px;padding:8px 10px;display:flex;flex-direction:column;gap:3px;background:' + (s.model === i ? '#2A2C30' : 'transparent'),
+      pick: () => { pickModel(i); this.setState({ modelMenu: false }); } }));
+    const lenOpts = model.lens.map((l) => ({ label: l + ' s', style: 'font:inherit;font-size:12px;cursor:pointer;border:0;border-radius:14px;height:28px;padding:0 11px;white-space:nowrap;' + (s.len === l ? 'background:#50545A;color:#ECEAE4' : 'background:transparent;color:#9A978F'), pick: () => this.setState({ len: l }) }));
+    const genCost = s.len * rate;
+    const imgConflict = !!s.img && !model.img;
+
+    // Generate.
+    // Each video has its own version chain: v1, v2, … per video id ('gen', 'gen2', …).
+    const vidOf = (q) => (q && q.vid) || 'gen';
+    const numOf = (q) => q.n || parseInt(String(q.name).slice(1), 10) || 0;
+    const newVer = (v) => { const st = this.state; const vid = v.vid || 'gen'; const n = st.vers.filter((q) => vidOf(q) === vid).reduce((m, q) => Math.max(m, numOf(q)), 0) + 1; return { ...v, vid, name: 'v' + n, n }; };
+    const nextVid = (vers) => { let k = 2; while (vers.some((q) => vidOf(q) === 'gen' + k)) k++; return 'gen' + k; };
+    const shortName = (txt) => ((c) => c.length <= 24 ? c : c.slice(0, 24).replace(/\s+\S*$/, ''))(String(txt || '').split(/[,.:;]/)[0].trim()).replace(/(\s+(a|an|the|on|at|in|of|and|with|to))+$/i, '') || 'Video';
+    const generate = () => {
+      const p = (this.state.prompt || '').trim();
+      if (!p) { this.say('Describe the video first'); return; }
+      if (imgConflict) { this.say(model.name + ' would ignore the photo — switch to Sora 2 or remove it'); return; }
+      charge(genCost, () => {
+        const st = this.state;
+        const first = st.vers.length === 0;
+        const k = first ? 'gen' : nextVid(st.vers);
+        const v = newVer({ vid: k, what: 'First take · ' + st.len + ' s', d: st.len, g: first ? 0 : 1 + 2 * (parseInt(k.slice(3), 10) || 1), p: 0, kind: 'paid', cost: this.fmt(genCost), costN: genCost, text: p, img: st.img ? st.img.name : '', model: st.model, from: '' });
+        this.setState({ vers: st.vers.concat([v]), cur: st.vers.length, vseq: v.n, genCount: st.genCount + 1, editText: null, editImg: undefined, compare: false, verMenu: -1, q: '',
+          prompt: '', img: null, modelMenu: false, mode: 'change',
+          name: st.name || shortName(p), genName: st.genName || (first ? (st.name || shortName(p)) : ''),
+          order: first && !st.order.includes('gen') ? st.order.concat(['gen']) : st.order,
+          tl: first && st.tl && !st.tl.some((it) => it.sid === 'gen') ? st.tl.concat([{ sid: 'gen', o: 0, f: 1 }]) : st.tl });
+        if (!first) this.say('New video added to the list — Add it to the edit when you want it there');
+      });
+    };
+    const onKeyEnter = (fn) => (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); fn(); } };
+    const attach = (setter) => (e) => { if (e && e.preventDefault) e.preventDefault(); const f = e && e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]; setter(f ? f.name : SAMPLE); this.setState({ drag: false }); };
+
+    // Versions.
+    const cv = s.vers[s.cur] || null;
+    const curVid = vidOf(cv);
+    const findIn = (vers, vid, name) => vers.find((q) => vidOf(q) === vid && q.name === name) || null;
+    const isNew = s.mode === 'new';
+    const editText = isNew ? (s.newText || '') : s.editText == null ? (cv ? cv.text : '') : s.editText;
+    const editImg = isNew ? (s.newImg || '') : s.editImg === undefined ? (cv ? cv.img : '') : s.editImg;
+    const editConflict = !!editImg && !model.img;
+    const editChanged = isNew ? !!editText.trim() : !!cv && (editText !== cv.text || editImg !== cv.img);
+    const takeCost = 8 * rate, extCost = 4 * rate;
+    const addVersion = (v) => {
+      const st = this.state;
+      const parent = st.vers[st.cur];
+      const nv = newVer({ ...v, vid: vidOf(parent), from: parent ? parent.name : '' });
+      this.setState({ vers: st.vers.concat([nv]), cur: st.vers.length, vseq: nv.n, editText: null, editImg: undefined });
+    };
+    const free = (what, fd, mods) => () => { if (!cv) return; if (cv.p < 100 || cv.status) { this.say('Pick a finished version first'); return; } addVersion({ what, d: fd(cv.d), g: cv.g, p: 100, kind: 'free', cost: 'free', text: cv.text, img: cv.img, model: cv.model, vert: cv.vert || '', zoom: !!cv.zoom, freeze: !!cv.freeze, trimmed: !!cv.trimmed, ...(mods || {}) }); };
+    const paid = (what, cost, dg, d, text, img, mods) => () => {
+      if (!cv) return;
+      if (img && !model.img) { this.say(model.name + ' would ignore the photo — switch to Sora 2 or remove it'); return; }
+      charge(cost, () => { const n = this.state.genCount + 1; this.setState({ genCount: n }); addVersion({ what, cost: this.fmt(cost), costN: cost, kind: 'paid', p: 0, g: cv.g + dg, d, text, img, model: this.state.model, failAt: n === 2 ? 60 : 0, status: '', ...(mods || {}) }); });
+    };
+    const removeVer = (i) => {
+      const st = this.state;
+      const v = st.vers[i];
+      const vers = st.vers.filter((_, j) => j !== i);
+      let cur = st.cur;
+      if (i === st.cur) {
+        const par = vers.findIndex((q) => vidOf(q) === vidOf(v) && q.name === v.from);
+        let same = -1; vers.forEach((q, j) => { if (vidOf(q) === vidOf(v)) same = j; });
+        cur = par >= 0 ? par : same >= 0 ? same : Math.max(0, vers.length - 1);
+      } else if (i < st.cur) cur = st.cur - 1;
+      const keep = (x) => !/^gen/.test(x) || vers.some((q) => vidOf(q) === x);
+      this.setState({ vers, cur, verMenu: -1, editText: null, editImg: undefined, compare: false, prompt: vers.length ? st.prompt : v.text, order: st.order.filter(keep), tl: st.tl ? st.tl.filter((it) => it.gap || keep(it.sid)) : st.tl });
+      this.say(v.p < 100 && !v.status ? v.name + ' stopped and removed. Credits for a started version are not returned.' : v.name + ' removed');
+    };
+    const moveVer = (i) => {
+      const st = this.state;
+      const v = st.vers[i];
+      const k = nextVid(st.vers);
+      const vers = st.vers.map((q, j) => j === i ? { ...q, vid: k, name: 'v1', n: 1, from: '' } : vidOf(q) === vidOf(v) && q.from === v.name ? { ...q, from: v.from } : q);
+      const done = v.p >= 100 && !v.status;
+      this.setState({ vers, cur: i, verMenu: -1, compare: false, editText: null, editImg: undefined });
+      this.say(v.name + ' is now v1 of its own video. Nothing was regenerated.');
+    };
+    const vers = s.vers.map((v, i) => ({ v, i })).filter((x) => vidOf(x.v) === curVid).map(({ v, i }, k, arr) => ({
+      name: v.name, kind: v.kind, cost: v.cost,
+      what: v.p < 100 && !v.status ? 'Rendering ' + v.p + '%' : v.what,
+      pick: () => this.setState({ cur: i, mode: 'change', verMenu: -1, editText: null, editImg: undefined }),
+      remove: () => removeVer(i), removeLabel: v.p < 100 && !v.status ? 'Stop and remove ' + v.name : 'Remove ' + v.name,
+      card: 'position:relative;width:156px;flex:none;padding:7px;border-radius:10px;box-sizing:border-box;' + (i === s.cur ? 'background:#212327;outline:2px solid #F5A11D' : 'background:#17181B'),
+      thumb: 'position:relative;overflow:hidden;aspect-ratio:16/9;border-radius:6px;background:' + this.G(v.g) + (v.p < 100 || v.status ? ';opacity:.45' : ''),
+      bar: bar(v.status ? 100 : v.p),
+      nameStyle: i === s.cur ? 'color:#F5A11D;font-weight:700' : '',
+      hasStatus: !!v.status, statusText: v.status === 'failed' ? "Didn't render" : 'Stopped',
+      hasFrom: !!v.from && (k === 0 || arr[k - 1].v.name !== v.from), fromLabel: 'from ' + v.from,
+      toggleMenu: () => this.setState({ verMenu: this.state.verMenu === i ? -1 : i }), hasMenu: s.verMenu === i, menuOpen: s.verMenu === i ? 'true' : 'false',
+      move: () => { if (arr.length < 2) { this.setState({ verMenu: -1 }); this.say(v.name + ' is the only version — it is already its own video'); return; } moveVer(i); },
+      moveNote: arr.length < 2 ? 'Already the only version here' : 'Free — nothing is regenerated',
+      moveStyle: 'font:inherit;color:#ECEAE4;text-align:left;cursor:pointer;border:0;border-radius:7px;padding:7px 9px;display:flex;flex-direction:column;gap:2px;background:transparent' + (arr.length < 2 ? ';opacity:.5' : '')
+    }));
+    const parentV = cv ? findIn(s.vers, curVid, cv.from) : null;
+    const box = (v) => 'position:relative;border-radius:8px;overflow:hidden;' + (v && v.vert ? 'height:360px;aspect-ratio:9/16;' : 'width:420px;aspect-ratio:16/9;') + 'background:' + this.G(v ? v.g : 0) + (v && v.status ? ';opacity:.4' : '');
+    const curIdx = s.cur;
+    const cancelCur = () => this.setState({ vers: this.state.vers.map((v, i) => i === curIdx ? { ...v, status: 'cancelled' } : v) });
+    const retryCost = cv ? (cv.costN || takeCost) : takeCost;
+    const retryCur = () => charge(retryCost, () => this.setState({ vers: this.state.vers.map((v, i) => i === curIdx ? { ...v, p: 0, status: '', failAt: 0 } : v) }));
+    const vert = cv && cv.vert;
+
+    const newVideo = () => {
+      const text = (this.state.newText || '').trim();
+      if (!text) { this.say('Describe the new video first'); return; }
+      if (editConflict) { this.say(model.name + ' would ignore the photo — switch to Sora 2 or remove it'); return; }
+      charge(genCost, () => {
+        const st = this.state;
+        const k = nextVid(st.vers);
+        const n = st.genCount + 1;
+        const v = newVer({ vid: k, what: 'First take · ' + st.len + ' s', d: st.len, g: 1 + 2 * (parseInt(k.slice(3), 10) || 1), p: 0, kind: 'paid', cost: this.fmt(genCost), costN: genCost, text, img: st.newImg || '', model: st.model, from: '', failAt: 0, status: '' });
+        this.setState({ vers: st.vers.concat([v]), cur: st.vers.length, vseq: v.n, genCount: n, mode: 'change', newText: '', newImg: '', editText: null, editImg: undefined, compare: false, verMenu: -1, q: '', modelMenu: false });
+        this.say('New video added to the list — Add it to the edit when you want it there');
+      });
+    };
+    const runCompose = () => { if (isNew) { newVideo(); return; } if (!editChanged) { this.say('Change the words or the photo first'); return; } if (editConflict) { this.say(model.name + ' would ignore the photo — switch to Sora 2 or remove it'); return; } paid('Edited prompt — new take', genCost, 3, this.state.len, editText, editImg)(); };
+
+    // Suggestions: worked out on the Mac, never run or spend on their own.
+    const dismiss = (id) => () => this.setState({ dis: this.state.dis.concat([id]) });
+    const accBtn = (paidOne) => 'font:inherit;font-size:12px;cursor:pointer;height:28px;border-radius:14px;padding:0 12px;white-space:nowrap;' + (paidOne ? 'background:#F5A11D;border:0;color:#17160F;font-weight:700' : 'background:#212327;border:1px solid #50545A;color:#ECEAE4');
+    const sug = (id, title, why, accLabel, accept, cost) => ({ id, title, why, accLabel, accept: () => { accept(); this.setState({ dis: this.state.dis.concat([id]) }); }, dismiss: dismiss(id),
+      accStyle: accBtn(!!cost), kind: cost ? '' : 'free', kindLabel: cost ? '' : 'free',
+      noticed: NOTICED[id.split('@')[0]] || title, tag: cost ? '' : ' · free', tagStyle: cost ? 'display:none' : 'color:#7AA578;font-size:11px',
+      chipStyle: 'display:inline-flex;align-items:center;height:28px;box-sizing:border-box;border-radius:14px;padding:0 4px 0 0;' + (cost ? 'background:#F5A11D;color:#17160F' : 'background:#1A1B1E;border:1px solid #34373B;color:#ECEAE4'),
+      chipBtn: accBtn(!!cost) + ';flex:none;height:24px;border-radius:12px;padding:0 10px',
+      chipX: 'width:22px;height:22px;border-radius:11px;font-size:10px;color:inherit;opacity:.7' });
+    const NOTICED = { 'v-trim': 'Nothing moves in the last 1.2 s', 'v-vert': 'The action stays in the middle — it crops well to 9:16', 'v-ext': 'It ends mid-action' };
+    const sp = s.prompt || '';
+    const appendPrompt = (add) => () => this.setState({ prompt: this.state.prompt.replace(/\s*$/, '') + ' ' + add });
+    const startSugs = [
+      s.img && !/photo/i.test(sp) && sug('s-photo', 'Add “the two people from the photo” to the words', 'Models follow a photo more closely when the prompt names who is in it.', 'Add to prompt', appendPrompt('Use the two people from the photo.')),
+      sp.trim() && !/(camera|handheld|close-up|wide shot|drone|tracking|eye level)/i.test(sp) && sug('s-cam', 'Add a camera: “handheld, eye level, wide shot”', 'Without it the model picks the angle at random — a common reason for a re-take.', 'Add to prompt', appendPrompt('Handheld camera, eye level, wide shot.'))
+    ].filter((g) => g && !s.dis.includes(g.id));
+    const cvDone = cv && cv.p >= 100 && !cv.status;
+    const vk = (id) => id + '@' + vidOf(cv);
+    const sugs = !cvDone ? [] : [
+      !cv.trimmed && !cv.freeze && sug(vk('v-trim'), 'Trim the last 1.2 s — the motion stops there', 'Nothing moves after that point. A shorter end feels tighter.', 'Trim it', free('Trimmed 1.2 s — motion had stopped', (d) => Math.round((d - 1.2) * 10) / 10, { trimmed: true })),
+      !cv.vert && sug(vk('v-vert'), 'Make a 9:16 copy for Reels and Shorts', 'What matters stays in the middle of the frame, so the crop loses only the edges.', 'Make 9:16', free('Vertical 9:16 · sides cropped', (d) => d, { vert: 'crop' })),
+      cv.d <= 8 && sug(vk('v-ext'), 'It ends mid-action — continue it by 4 s', 'Starts from the last frame, so the scene stays the same.', '◆ Continue +4 s · ~' + this.fmt(extCost), paid('+4 s from the last frame', extCost, 0, cv.d + 4, cv.text, cv.img), extCost)
+    ].filter((g) => g && !s.dis.includes(g.id)).slice(0, 3);
+
+    // Edit: sources in the order they arrived.
+    const goodFor = (vid) => {
+      const mine = s.vers.filter((q) => vidOf(q) === vid);
+      if (!mine.length) return null;
+      let v = cv && vidOf(cv) === vid ? cv : mine[mine.length - 1];
+      while (v && (v.status || v.p < 100)) v = findIn(s.vers, vid, v.from);
+      return v || mine.slice().reverse().find((q) => q.p >= 100 && !q.status) || null;
+    };
+    const gv = goodFor(curVid);
+    const projName = s.name || 'Untitled';
+    const vids = [];
+    s.vers.forEach((q) => { if (!vids.includes(vidOf(q))) vids.push(vidOf(q)); });
+    const vidName = (vid) => vid === 'gen' ? (s.genName || projName) : shortName((s.vers.find((q) => vidOf(q) === vid) || {}).text);
+    const byId = {};
+    vids.forEach((vid) => { const g = goodFor(vid); if (g) byId[vid] = { id: vid, kind: 'gen', name: vidName(vid) + ' · ' + g.name, d: g.d, g: g.g, text: g.text }; });
+    const ql = (s.q || '').trim().toLowerCase();
+    const videoList = vids.slice().reverse().filter((vid) => !ql || vidName(vid).toLowerCase().includes(ql) || s.vers.some((q) => vidOf(q) === vid && String(q.text).toLowerCase().includes(ql))).map((vid) => {
+      const mine = s.vers.filter((q) => vidOf(q) === vid);
+      const last = mine[mine.length - 1];
+      const g = goodFor(vid) || last;
+      const busy = mine.find((q) => q.p < 100 && !q.status);
+      const sel = vid === curVid && !isNew;
+      const usedList = (s.order.includes(vid) ? ['this project'] : []).concat(Object.keys(s.projects || {}).filter((id) => s.projects[id].order.includes(vid)).map((id) => s.projects[id].name || 'Untitled'));
+      return { label: vidName(vid), inEdit: s.order.includes(vid), hasUsed: usedList.length > 0, used: '✓ In ' + usedList.join(', '),
+        sub: busy ? 'Rendering ' + busy.p + '%' : mine.length + (mine.length === 1 ? ' version' : ' versions') + ' · ' + g.d + ' s',
+        style: 'font:inherit;color:#ECEAE4;text-align:left;cursor:pointer;border:0;border-radius:8px;padding:6px;display:flex;gap:10px;align-items:center;width:100%;box-sizing:border-box;background:' + (sel ? '#212327' : 'transparent') + (sel ? ';box-shadow:inset 2px 0 0 #F5A11D' : ''),
+        thumb: 'position:relative;overflow:hidden;flex:none;width:64px;height:36px;border-radius:5px;background:' + this.G(g.g) + (busy ? ';opacity:.6' : ''),
+        bar: busy ? 'position:absolute;left:0;bottom:0;height:3px;background:#FFD475;width:' + busy.p + '%' : 'display:none',
+        pick: () => { let j = -1; this.state.vers.forEach((q, x) => { if (vidOf(q) === vid) j = x; }); this.setState({ cur: j, mode: 'change', compare: false, verMenu: -1, editText: null, editImg: undefined, modelMenu: false }); } };
+    });
+    if (s.rec) byId.rec = { id: 'rec', kind: 'rec', name: 'spotlight-demo.mov', d: 180 };
+    const sources = s.order.map((id) => byId[id]).filter(Boolean);
+    const tlRaw = (s.tl || sources.map((x) => ({ sid: x.id, o: 0, f: 1 }))).filter((it) => it.gap || byId[it.sid]);
+    let acc = 0;
+    const tlItems = tlRaw.map((it, i) => {
+      const src = it.gap ? null : byId[it.sid];
+      const D = it.gap ? it.d : src.d * it.f;
+      const r = { ...it, i, start: acc, d: Math.round(D * 10) / 10, src, name: src ? src.name + (it.part > 1 ? ' (' + it.part + ')' : '') + (it.dup ? ' copy' : '') : '' };
+      acc += D;
+      return r;
+    });
+    const editSec = acc;
+    const secs = Math.max(editSec, 1);
+    const laneW = 1440 - 300 - 110 - 16;
+    const pxs = (sec) => Math.round(sec / secs * laneW);
+    const playSec = Math.min(s.play, Math.max(editSec - 0.5, 0));
+    const strip = (it) => { const o = { ...it }; ['i', 'start', 'src', 'name'].forEach((k) => delete o[k]); return o; };
+    const setTl = (next, extra) => this.setState({ tl: next.map(strip), ...(extra || {}) });
+    const selC = s.selClip >= 0 && tlItems[s.selClip] && !tlItems[s.selClip].gap ? tlItems[s.selClip] : null;
+    const vidClips = tlItems.map((c) => ({ label: c.gap ? '' : c.name,
+      pick: c.gap ? () => this.setState({ selClip: -1 }) : () => this.setState({ selClip: c.i, selTitle: -1, selCard: -1, rightTab: 'inspector' }),
+      style: 'position:absolute;top:0;height:60px;font:inherit;text-align:left;cursor:pointer;border-radius:6px;padding:6px;box-sizing:border-box;font-size:11px;overflow:hidden;white-space:nowrap;left:' + pxs(c.start) + 'px;width:' + Math.max(pxs(c.d) - 3, 6) + 'px;' +
+        (c.gap ? 'background:transparent;border:1px dashed #50545A;color:#9A978F' : (c.src.kind === 'rec' ? 'color:#ECEAE4;' : 'color:#FFD475;') + 'background:' + this.G(c.src.kind === 'rec' ? 'rec' : c.src.g) + ';border:' + (s.selClip === c.i ? '2px solid #ECEAE4' : c.src.kind === 'rec' ? '1.5px solid #9CC3E6' : '1.5px solid #FFD475')) }));
+    const titleClips = s.titles.map((t, i) => ({ ...t,
+      pick: () => this.setState({ selTitle: i, selClip: -1 }),
+      style: 'position:absolute;top:0;height:36px;font:inherit;font-size:11px;text-align:left;cursor:pointer;color:#ECEAE4;background:#2a2440;border-radius:6px;padding:4px 8px;box-sizing:border-box;overflow:hidden;white-space:nowrap;border:' + (s.selTitle === i ? '2px solid #ECEAE4' : '1px solid #7C5CFF') + ';left:' + pxs(t.start) + 'px;width:' + Math.max(pxs(t.d), 24) + 'px' }));
+    const doSplit = () => {
+      if (!selC) return;
+      const cut = playSec - selC.start;
+      if (cut <= 0.4 || cut >= selC.d - 0.4) { this.say('Move the playhead inside the clip to split it'); return; }
+      const cutF = cut / selC.src.d, pt = selC.part || 1;
+      setTl(tlItems.slice(0, selC.i).concat([{ ...selC, f: cutF, part: pt }, { ...selC, o: selC.o + cutF, f: selC.f - cutF, part: pt + 1 }], tlItems.slice(selC.i + 1)));
+      this.say('Split at ' + this.mmss(playSec));
+    };
+    const doDup = () => { if (!selC) return; setTl(tlItems.slice(0, selC.i + 1).concat([{ ...selC, dup: true }], tlItems.slice(selC.i + 1)), { selClip: selC.i + 1 }); this.say('Duplicated'); };
+    const doDelete = () => {
+      if (s.selTitle >= 0) { this.setState({ titles: s.titles.filter((_, i) => i !== s.selTitle), selTitle: -1 }); this.say('Deleted'); return; }
+      if (!selC) return;
+      setTl(tlItems.map((c, i) => i === selC.i ? { gap: true, d: c.d } : c), { selClip: -1 }); this.say('Deleted — the gap stays');
+    };
+    const doClose = () => { if (!selC) return; setTl(tlItems.filter((_, i) => i !== selC.i), { selClip: -1 }); this.say('Deleted and closed the gap'); };
+    const barItems = (s.selTitle >= 0 ? [['Delete', doDelete, 1]] : [['Split', doSplit, 0], ['Duplicate', doDup, 0], ['sep'], ['Delete', doDelete, 1], ['Close gap', doClose, 1]])
+      .map(([label, run, red]) => label === 'sep' ? { sep: true, notSep: false } : { sep: false, notSep: true, label, run,
+        tip: { Split: 'Split at Playhead ⌘B', Duplicate: 'Duplicate ⌘D', Delete: 'Delete ⌫ — leaves the gap', 'Close gap': 'Delete and Close Gap ⇧⌫' }[label],
+        style: 'font:inherit;font-size:12px;background:transparent;border:0;border-radius:6px;padding:6px 9px;cursor:pointer;' + (red ? 'color:#F28B82' : 'color:#ECEAE4') });
+    let barCenter = -1;
+    if (selC) barCenter = 110 + pxs(selC.start + selC.d / 2);
+    if (s.selTitle >= 0 && s.titles[s.selTitle]) { const t = s.titles[s.selTitle]; barCenter = 110 + pxs(t.start + t.d / 2); }
+    const barW = s.selTitle >= 0 ? 90 : 340;
+    const barLeft = Math.max(116, Math.min(1440 - 300 - barW - 12, barCenter - barW / 2));
+    const ticks = [];
+    const step = Math.max(1, Math.round(secs / 8));
+    for (let t = 0; t <= secs; t += step) ticks.push({ label: this.mmss(t), go: () => this.setState({ play: t }) });
+
+    // Transcript, captions, text.
+    let wi = 0;
+    const segsRaw = s.rec ? this.SEGS.map(([at, text]) => ({ at, tc: this.mmss(at), words: text.split(' ').map((t) => ({ t, i: wi++ })) })) : [];
+    const audioEnd = s.rec ? 180 : 0;
+    const segs = segsRaw.map((g) => ({ tc: g.tc, words: g.words.map((w) => {
+      const on = s.wsel.includes(w.i), cut = s.struck.includes(w.i);
+      return { t: w.t, pick: () => { const ws = this.state.wsel; this.setState({ wsel: ws.includes(w.i) ? ws.filter((x) => x !== w.i) : ws.concat([w.i]) }); },
+        style: 'font:inherit;border:0;cursor:pointer;border-radius:3px;padding:0 2px;margin:0 1px;' + (cut ? 'background:transparent;color:#5f5d58;text-decoration:line-through' : on ? 'background:rgba(245,161,29,.3);color:#ECEAE4' : 'background:transparent;color:#ECEAE4') };
+    }) }));
+    const cueText = (g) => g.words.filter((w) => !s.struck.includes(w.i)).map((w) => w.t).join(' ');
+    const segAt = (sec) => { let k = -1; segsRaw.forEach((g, j) => { if (g.at <= sec) k = j; }); return k; };
+    const cueAt = (sec) => { const k = segAt(sec); return k >= 0 && sec < audioEnd ? cueText(segsRaw[k]) : ''; };
+    const segEnd = (k) => k + 1 < segsRaw.length ? segsRaw[k + 1].at : audioEnd;
+    const CAPS = [
+      { name: 'Clean', css: (px) => 'font-size:' + px + 'px;font-weight:600;color:#fff;text-shadow:0 2px 6px rgba(0,0,0,.85)' },
+      { name: 'Bold', css: (px) => 'font-size:' + px + 'px;font-weight:800;color:#fff;background:rgba(11,12,14,.78);padding:' + Math.round(px * .2) + 'px ' + Math.round(px * .5) + 'px;border-radius:' + Math.round(px * .3) + 'px' },
+      { name: 'Boxed', css: (px) => 'font-size:' + px + 'px;font-weight:700;color:#17160F;background:#ECEAE4;padding:' + Math.round(px * .2) + 'px ' + Math.round(px * .5) + 'px;border-radius:' + Math.round(px * .3) + 'px' },
+      { name: 'Pop', css: (px) => 'font-size:' + px + 'px;font-weight:800;color:#FFD60A;text-transform:uppercase;text-shadow:0 ' + Math.max(1, Math.round(px * .1)) + 'px 0 #000,0 0 ' + Math.round(px * .3) + 'px rgba(0,0,0,.6)' },
+      { name: 'Outline', css: (px) => 'font-size:' + px + 'px;font-weight:800;color:#fff;text-shadow:-1px -1px 0 #000,1px -1px 0 #000,-1px 1px 0 #000,1px 1px 0 #000' },
+      { name: 'Subtle', css: (px) => 'font-size:' + Math.round(px * .85) + 'px;font-weight:500;color:#ECEAE4;background:rgba(11,12,14,.5);padding:' + Math.round(px * .15) + 'px ' + Math.round(px * .4) + 'px;border-radius:' + Math.round(px * .2) + 'px' }
+    ];
+    const sizeMul = [0.8, 1, 1.25][s.capSize];
+    const capCss = (base) => CAPS[s.capPreset].css(Math.round(base * sizeMul));
+    const capPosCss = (vertical, big) => s.capPos === 'top' ? 'top:' + (big ? '8%' : (vertical ? '70px' : '16px')) : s.capPos === 'middle' ? 'top:50%;transform:translateY(-50%)' : 'bottom:' + (big ? (vertical ? '20%' : '7%') : (vertical ? '70px' : '16px'));
+    const capLooks = [capCss(20)];
+    const startTr = () => { if (this.state.tr === 'none') this.setState({ tr: 'running', trP: 0, leftTab: 'transcript' }); };
+    const importRec = () => { if (this.state.rec) { this.say('This prototype has one sample video'); return; } const st = this.state; this.setState({ rec: true, tab: 'edit', leftTab: 'transcript', order: st.order.concat(['rec']), tl: st.tl ? st.tl.concat([{ sid: 'rec', o: 0, f: 1 }]) : null }); };
+    const frameAt = (t) => {
+      const it = tlItems.find((c) => !c.gap && t >= c.start && t < c.start + c.d) || null;
+      const local = it && it.src.kind === 'rec' ? it.o * it.src.d + (t - it.start) : -1;
+      const title = s.titles.filter((x) => t >= x.start && t < x.start + x.d).slice(-1)[0] || null;
+      return { it, cap: local >= 0 && s.caps && s.burn ? cueAt(local) : '', title: title ? title.words : '' };
+    };
+
+    // Clips (Repurpose run).
+    const rpCostN = 60, rrCostN = 10;
+    const clipOf = (c) => { const base = this.CLIPS[c.k]; const v = c.v === 0 ? base : base.alts[c.v - 1]; const a = segsRaw[v.a] ? segsRaw[v.a].at : 0; const b = segEnd(v.b); return { hook: v.hook, sa: v.a, sb: v.b, a, b, d: b - a }; };
+    const setCard = (k, patch) => this.setState({ cards: this.state.cards.map((c) => c.k === k ? { ...c, ...patch } : c) });
+    const openPvFor = (src) => { const c = src === 'edit' ? null : this.state.cards.find((q) => q.k === src); const len = c ? clipOf(c).d : Math.max(editSec, 1); this.setState({ pv: { src, t: 0, len, playing: true, aspect: c ? '9:16' : '16:9', exp: null } }); setTimeout(() => { const b = typeof document !== 'undefined' && document.querySelector('[data-pv-close]'); if (b) b.focus(); }, 0); };
+    const cards = s.rec && s.rp === 'done' ? s.cards.map((c) => {
+      const x = clipOf(c); const on = s.selCard === c.k;
+      return { ...x, k: c.k, v: c.v, rr: c.rr,
+        shown: c.st !== 'gone', gone: c.st === 'gone', isNew: c.st === 'new' && c.rr >= 100, isKept: c.st === 'kept' && c.rr >= 100, isBusy: c.rr < 100,
+        range: this.mmss(x.a) + ' → ' + this.mmss(x.b) + ' · ' + x.d + ' s',
+        wrap: 'display:flex;gap:10px;padding:8px;border-radius:9px;background:' + (on ? '#212327' : '#1A1B1E') + ';border:1px solid ' + (on ? '#F5A11D' : c.st === 'kept' ? '#4a6a48' : '#212327'),
+        thumb: 'position:relative;flex:none;width:45px;height:80px;border:0;padding:0;cursor:pointer;border-radius:6px;overflow:hidden;background:' + this.recG(c.k + c.v) + (c.rr < 100 ? ';opacity:.45' : ''),
+        bar: c.rr < 100 ? 'position:absolute;left:0;bottom:0;height:3px;background:#FFD475;width:' + c.rr + '%' : 'display:none',
+        hookStyle: 'text-align:left;font-weight:700;line-height:1.35;color:' + (on ? '#F5A11D' : '#ECEAE4'),
+        pick: () => this.setState({ selCard: c.k, selClip: -1, selTitle: -1 }),
+        keep: () => setCard(c.k, { st: 'kept' }),
+        discard: () => this.setState({ cards: this.state.cards.map((q) => q.k === c.k ? { ...q, st: 'gone' } : q), selCard: s.selCard === c.k ? -1 : s.selCard }),
+        undo: () => setCard(c.k, { st: 'new' }),
+        reroll: () => charge(rrCostN, () => setCard(c.k, { rr: 0 })),
+        preview: () => openPvFor(c.k) };
+    }) : [];
+    const kept = cards.filter((c) => c.isKept);
+    const selCardObj = cards.find((c) => c.k === s.selCard && !c.gone) || null;
+    const cardMode = s.rightTab === 'clips' && !!selCardObj;
+
+    const capSample = (frameAt(playSec).cap || 'Hit Return and the app opens.').split(' ').slice(0, 6).join(' ');
+    // Centre frame in Edit.
+    let F = { bg: '#000', vert: false, rec: false, hook: '', cap: '', capStyle: capCss(20), title: '', label: '' };
+    if (cardMode) F = { ...F, vert: true, bg: this.recG(selCardObj.k + selCardObj.v), rec: true, hook: selCardObj.hook, cap: s.tr === 'done' ? cueAt(selCardObj.a) : '', capStyle: 'font-size:13px;font-weight:800;color:#fff;background:rgba(11,12,14,.78);padding:3px 8px;border-radius:5px', label: 'Clip ' + (selCardObj.k + 1) + ' · 9:16 · ' + selCardObj.d + ' s' };
+    else { const fr = frameAt(playSec); const it = fr.it; F = { ...F, bg: it ? this.G(it.src.kind === 'rec' ? 'rec' : it.src.g) : '#000', rec: !!it && it.src.kind === 'rec', cap: fr.cap, title: fr.title, label: it ? it.name + ' · ' + this.mmss(playSec) : '' }; }
+
+    // Full-window preview.
+    const pv = s.pv;
+    const pvCard = pv && pv.src !== 'edit' ? cards.find((c) => c.k === pv.src) || null : null;
+    const pvAbs = pv ? (pvCard ? pvCard.a : 0) + pv.t : 0;
+    const pvVert = !!pv && pv.aspect === '9:16';
+    const pvFr = pv && !pvCard ? frameAt(pvAbs) : null;
+    const pvBg = pvCard ? this.recG(pvCard.k + pvCard.v) : pvFr && pvFr.it ? this.G(pvFr.it.src.kind === 'rec' ? 'rec' : pvFr.it.src.g) : '#000';
+    const pvCap = pv ? (pvCard ? cueAt(pvAbs) : pvFr.cap) : '';
+    const segPick = (on) => 'font:inherit;cursor:pointer;border:0;border-radius:6px;padding:5px 14px;white-space:nowrap;' + (on ? 'background:#F5A11D;color:#17160F' : 'background:transparent;color:#ECEAE4');
+    const pvSrcList = pv ? [{ src: 'edit', label: 'Whole edit · ' + this.mmss(editSec) }].concat(cards.filter((c) => c.isKept || pv.src === c.k).map((c) => ({ src: c.k, label: 'Clip ' + (c.k + 1) + ' · ' + c.d + ' s' }))) : [];
+    const pvDims = pvVert ? '1080 × 1920' : '1920 × 1080';
+
+    return {
+      name: s.name, nameSize: Math.max(8, (s.name || '').length + 1), onName: (e) => this.setState({ name: e.target.value }),
+      creditsText: this.fmt(s.credits),
+      tabGenStyle: tabStyle(s.tab === 'gen'), tabEditStyle: tabStyle(s.tab === 'edit'),
+      toGen: () => this.setState({ tab: 'gen' }), toEdit: () => this.setState({ tab: 'edit' }),
+      restart: () => this.setState(this.fresh(false)),
+      isEditTab: s.tab === 'edit',
+      isGenEmpty: s.tab === 'gen' && s.vers.length === 0, isGenWork: s.tab === 'gen' && s.vers.length > 0, isGenAny: s.tab === 'gen', hasVids: s.vers.length > 0, noVids: s.vers.length === 0, showStart: s.vers.length === 0, showWork: s.vers.length > 0, notNewMode: s.mode !== 'new',
+      isEditEmpty: s.tab === 'edit' && sources.length === 0, isEditFull: s.tab === 'edit' && sources.length > 0,
+
+      composerStyle: 'display:flex;flex-direction:column;gap:12px;background:#1A1B1E;border-radius:16px;padding:16px 16px 12px;box-sizing:border-box;border:' + (s.drag ? '1.5px dashed #F5A11D' : '1px solid #50545A'),
+      onDragOver: (e) => { if (e && e.preventDefault) e.preventDefault(); if (!this.state.drag) this.setState({ drag: true }); },
+      onDragLeave: () => this.setState({ drag: false }),
+      onDrop: attach((n) => this.setState({ img: { name: n } })),
+      addImg: () => this.setState({ img: { name: SAMPLE } }),
+      removeImg: () => { this.setState({ img: null }); this.say('Photo removed'); },
+      hasImg: !!s.img, imgName: s.img ? s.img.name : '',
+      imgUse: model.img ? 'The video starts from this photo' : 'Ignored by ' + model.name, imgUseStyle: 'font-size:11px;' + (model.img ? 'color:#7AA578' : 'color:#FFD475'),
+      prompt: s.prompt, onPrompt: (e) => this.setState({ prompt: e.target.value }), onPromptKey: onKeyEnter(generate),
+      modelOpts, lenOpts, modelName: model.name, modelSub: model.sub, modelMenu: !!s.modelMenu, modelMenuOpen: s.modelMenu ? 'true' : 'false',
+      toggleModelMenu: () => this.setState({ modelMenu: !this.state.modelMenu }),
+      modelBtnStyle: 'font:inherit;font-size:12px;color:#ECEAE4;cursor:pointer;height:36px;box-sizing:border-box;border-radius:18px;padding:0 14px;display:flex;gap:8px;align-items:center;white-space:nowrap;background:' + (s.modelMenu ? '#2A2C30' : '#131416') + ';border:1px solid ' + (s.modelMenu ? '#50545A' : '#34373B'),
+      genCostShort: '~' + this.fmt(genCost),
+      lenNote: model.name + ' makes ' + model.lens.join(' / ') + ' s',
+      genCost: cl(genCost), generate,
+      genBtnStyle: 'white-space:nowrap;flex:none;height:36px;border-radius:18px;padding:0 18px;font-size:13px;' + ((s.prompt || '').trim() && !imgConflict ? '' : 'opacity:.4;cursor:default'),
+      imgConflict, switchImgModel: () => pickModel(0),
+
+      compareOn: s.compare && !!parentV, compareOff: !(s.compare && !!parentV), hasParent: !!parentV,
+      toggleCompare: () => this.setState({ compare: !this.state.compare }), compareLabel: s.compare ? 'Close compare' : 'Compare with ' + (parentV ? parentV.name : ''),
+      cmpA: box(parentV), cmpB: box(cv), cmpAName: parentV ? parentV.name + ' · ' + parentV.what : '', cmpBName: cv ? cv.name + ' · ' + cv.what : '',
+      playerStyle: 'position:relative;overflow:hidden;border-radius:8px;' + (vert ? 'height:360px;aspect-ratio:9/16;' : 'width:640px;height:360px;') + 'background:' + this.G(cv ? cv.g : 0),
+      playerInner: 'position:absolute;inset:0;background:radial-gradient(circle at 50% 40%,rgba(255,230,180,.25),transparent 45%);' + (cv && cv.zoom && cv.p >= 100 ? 'animation:kb 6s ease-in-out infinite alternate' : ''),
+      playerFromImg: !!cv && !!cv.img && M[cv.model].img,
+      playerLabel: cv ? cv.name + ' · ' + cv.d + ' s · ' + M[cv.model].name : '',
+      playerTags: cv ? [cv.img ? 'from ' + cv.img : '', cv.vert === 'crop' ? '9:16 · cropped' : cv.vert === 'gen' ? '9:16 · full frame' : '', cv.zoom ? 'Slow zoom' : '', cv.freeze ? '+2 s hold' : ''].filter(Boolean) : [],
+      playerBusy: !!cv && cv.p < 100 && !cv.status, playerPct: cv ? cv.p : 0, playerBar: 'width:' + (cv ? cv.p : 0) + '%;height:4px;background:#FFD475;border-radius:2px',
+      playerStopped: !!cv && !!cv.status,
+      stopTitle: cv && cv.status === 'failed' ? "This version didn't render" : 'Stopped', stopTitleStyle: 'font-weight:700;' + (cv && cv.status === 'failed' ? 'color:#F28B82' : ''),
+      stopBody: cv && cv.status === 'failed' ? 'The provider stopped at 60%. This is what you asked for:' : 'Credits for a started version are not returned. This is what you asked for:',
+      curText: cv ? cv.text : '', retryCur, retryCost: cl(retryCost), cancelCur,
+      focusEdit: () => { const el = typeof document !== 'undefined' && document.querySelector('[data-edit-prompt]'); if (el) el.focus(); },
+      vers, curName: cv ? cv.name : 'v1',
+      editText, onEditText: (e) => this.setState(isNew ? { newText: e.target.value } : { editText: e.target.value }), onEditKey: (e) => { if (e.key === 'Escape' && isNew) { e.preventDefault(); this.setState({ mode: 'change' }); return; } onKeyEnter(() => { if (editChanged && !editConflict) runCompose(); })(e); },
+      editHasImg: !!editImg, editImgName: editImg || '', removeEditImg: () => this.setState(isNew ? { newImg: '' } : { editImg: '' }),
+      addEditImg: () => this.setState(isNew ? { newImg: SAMPLE } : { editImg: SAMPLE }), onDropEdit: attach((n) => this.setState(isNew ? { newImg: n } : { editImg: n })),
+      modeIsChange: !isNew, modeChangeStyle: tab3(!isNew), modeNewStyle: tab3(isNew), modeChangePressed: isNew ? 'false' : 'true', modeNewPressed: isNew ? 'true' : 'false',
+      toChange: () => this.setState({ mode: 'change' }), toNew: () => this.setState({ mode: 'new', modelMenu: false, compare: false }),
+      modeNote: isNew ? 'Starts a separate video with its own versions. ' + (cv ? cv.name : 'This video') + ' stays as it is.' : 'The result becomes the next version of this video.',
+      editPlaceholder: isNew ? 'Describe the new video. Drop a photo here to start from it.' : 'Describe the change.',
+      showSugs: false,
+      ...(() => {
+        const has = (k) => !isNew && sugs.find((g) => g.id.split('@')[0] === k);
+        const hi = 'border-color:#F5A11D;box-shadow:inset 0 0 0 1px rgba(245,161,29,.35)';
+        const t = has('v-trim'), v = has('v-vert'), x = has('v-ext');
+        return {
+          trimStyle: 'padding:6px 9px;' + (t ? hi : ''), trimLabel: t ? '✦ Trim end 1.2 s' : 'Trim end', trimWhy: t ? 'Nothing moves in the last 1.2 s' : 'Trims 1 s off the end', fTrimS: t ? t.accept : free('Trimmed 1 s off the end', (d) => Math.max(2, d - 1), { trimmed: true }),
+          vertStyle: 'padding:6px 9px;' + (v ? hi : ''), vertLabel: v ? '✦ Vertical 9:16' : 'Vertical 9:16', vertWhy: (v ? 'The action stays in the middle. ' : '') + 'Crops the sides — nothing is regenerated', fVertS: v ? v.accept : free('Vertical 9:16 · sides cropped', (d) => d, { vert: 'crop' }),
+          extStyle: x ? hi : '', extLabel: x ? '✦ Continue +4 s' : 'Continue +4 s', extWhy: (x ? 'It ends mid-action. ' : '') + 'Starts from the last frame, so the scene stays the same.',
+          freeNotes: [t && 'Nothing moves in the last 1.2 s — trim it', v && 'The action stays in the middle — crops well to 9:16'].filter(Boolean),
+          paidNotes: [x && 'It ends mid-action — continuing keeps the same scene'].filter(Boolean),
+        };
+      })(),
+      videoCount: vids.length, q: s.q, onQ: (e) => this.setState({ q: e.target.value }),
+      videoList, noMatches: !!s.q.trim() && videoList.length === 0,
+      vidTitle: vidName(curVid), gvName: gv ? gv.name : '',
+      inEdit: s.order.includes(curVid), notInEdit: !s.order.includes(curVid),
+      addToEdit: () => { const st = this.state; if (st.order.includes(curVid)) return; this.setState({ order: st.order.concat([curVid]), tl: st.tl ? st.tl.concat([{ sid: curVid, o: 0, f: 1 }]) : st.tl }); this.say(vidName(curVid) + (gv ? ' added to the end of the edit' : ' will land in the edit when it renders')); },
+      removeFromEdit: () => { const st = this.state; this.setState({ order: st.order.filter((x) => x !== curVid), tl: st.tl ? st.tl.filter((it) => it.sid !== curVid) : st.tl }); this.say(vidName(curVid) + ' removed from the edit — it stays in Videos'); },
+      hasGenNotInEdit: vids.length > 0 && !vids.some((vid) => s.order.includes(vid)),
+      focusNew: () => { this.setState({ mode: 'new', newText: '', newImg: '', modelMenu: false, compare: false, verMenu: -1 }); setTimeout(() => { const el = typeof document !== 'undefined' && document.querySelector('[data-edit-prompt]'); if (el) el.focus(); }, 30); },
+      ...(() => {
+        const item = 'font:inherit;font-size:13px;color:#ECEAE4;text-align:left;cursor:pointer;border:0;border-radius:8px;padding:8px 10px;display:flex;justify-content:space-between;align-items:center;gap:8px;background:transparent';
+        const others = Object.keys(s.projects || {});
+        const clips = (n) => n + (n === 1 ? ' clip' : ' clips');
+        const open = (id, extra, msg) => { const st = this.state; const ps = Object.assign({}, st.projects); const target = ps[id]; delete ps[id]; ps[st.projId] = this.snapProject(st); this.setState(Object.assign({}, target, { projects: ps, projId: id, projMenu: false, addMenu: false }, extra || {})); this.say(msg || ('Opened “' + (target.name || 'Untitled') + '” — generated videos are shared between projects')); };
+        const create = (order, extra) => { const st = this.state; const id = 'p' + (st.projSeq + 1); const ps = Object.assign({}, st.projects); ps[id] = Object.assign(this.blankProject(''), { order }); this.setState({ projects: ps, projSeq: st.projSeq + 1 }); setTimeout(() => open(id, extra), 0); };
+        const addTo = (id) => { const st = this.state; const ps = Object.assign({}, st.projects); const pr = Object.assign({}, ps[id]); const had = pr.order.includes(curVid); if (!had) { pr.order = pr.order.concat([curVid]); if (pr.tl) pr.tl = pr.tl.concat([{ sid: curVid, o: 0, f: 1 }]); } ps[id] = pr; this.setState({ projects: ps, addMenu: false }); setTimeout(() => open(id, { tab: 'edit' }, (had ? vidName(curVid) + ' is already in “' : 'Added ' + vidName(curVid) + ' to the end of “') + (pr.name || 'Untitled') + '” — back to the other project from ▾ next to the name'), 0); };
+        return {
+          projName, projMenu: !!s.projMenu, projMenuOpen: s.projMenu ? 'true' : 'false', toggleProjMenu: () => this.setState({ projMenu: !this.state.projMenu, addMenu: false }),
+          projItemStyle: item, projCurStyle: item + ';background:#2A2C30',
+          otherProjects: others.map((id) => ({ name: s.projects[id].name || 'Untitled', sub: clips(s.projects[id].order.length), style: item, open: () => open(id) })),
+          newProject: () => create([], { tab: 'gen', mode: s.vers.length ? 'new' : 'change', newText: '', newImg: '' }),
+          addMenu: !!s.addMenu, addMenuOpen: s.addMenu ? 'true' : 'false', toggleAddMenu: () => this.setState({ addMenu: !this.state.addMenu, projMenu: false }),
+          addTargets: others.map((id) => ({ name: s.projects[id].name || 'Untitled', mark: s.projects[id].order.includes(curVid) ? '✓ added' : '', style: item, add: () => addTo(id) })),
+          newProjectWith: () => create([curVid], { tab: 'edit' }),
+        };
+      })(),
+      isNewMode: isNew, showAddEdit: !isNew && !s.order.includes(curVid), showInEdit: !isNew && s.order.includes(curVid),
+      panelTitle: isNew ? 'New video' : vidName(curVid) + ' · ' + (cv ? cv.name : 'v1'),
+      panelNote: isNew ? 'A separate video with its own versions.' : 'Change the words to make the next version of this video.',
+      enterHint: isNew ? 'Enter makes the new video · Shift-Enter starts a new line' : 'Enter makes a new version · Shift-Enter starts a new line',
+      bottomBoxStyle: 'flex:none;display:flex;flex-direction:column;gap:8px;background:#1A1B1E;border-radius:16px;padding:10px 10px 10px 10px;box-sizing:border-box;border:' + (s.drag ? '1.5px dashed #F5A11D' : '1px solid #50545A'),
+      newBtnStyle: 'white-space:nowrap;flex:none;height:32px;border-radius:16px;padding:0 14px;font-size:12px;font-weight:700;' + ((s.prompt || '').trim() && !imgConflict ? '' : 'opacity:.4;cursor:default'),
+      editModelBtnStyleB: 'font:inherit;font-size:12px;color:#ECEAE4;cursor:pointer;height:32px;flex:none;box-sizing:border-box;border-radius:16px;padding:0 11px;display:flex;gap:6px;align-items:center;white-space:nowrap;background:' + (s.modelMenu === 'b' ? '#2A2C30' : '#131416') + ';border:1px solid ' + (s.modelMenu === 'b' ? '#50545A' : '#34373B'),
+      modelMenuB: s.modelMenu === 'b', modelMenuBOpen: s.modelMenu === 'b' ? 'true' : 'false', toggleModelMenuB: () => this.setState({ modelMenu: this.state.modelMenu === 'b' ? false : 'b' }),
+      modelMenuR: s.modelMenu === 'r', modelMenuROpen: s.modelMenu === 'r' ? 'true' : 'false', toggleModelMenuR: () => this.setState({ modelMenu: this.state.modelMenu === 'r' ? false : 'r' }),
+      manyVideos: vids.length > 1,
+      videos: vids.map((vid) => ({ label: vidName(vid), style: 'font:inherit;font-size:12px;cursor:pointer;border:0;border-radius:6px;padding:3px 10px;white-space:nowrap;max-width:150px;overflow:hidden;text-overflow:ellipsis;' + (vid === curVid ? 'background:#50545A;color:#ECEAE4' : 'background:transparent;color:#9A978F'),
+        pick: () => { let j = -1; this.state.vers.forEach((q, x) => { if (vidOf(q) === vid) j = x; }); this.setState({ cur: j, mode: 'change', compare: false, verMenu: -1, editText: null, editImg: undefined }); } })),
+      editConflict,
+      editBoxStyle: 'display:flex;flex-direction:column;gap:10px;background:#1A1B1E;border-radius:16px;padding:12px 12px 10px;box-sizing:border-box;border:' + (s.drag ? '1.5px dashed #F5A11D' : '1px solid #50545A'),
+      editModelBtnStyle: 'font:inherit;font-size:12px;color:#ECEAE4;cursor:pointer;height:32px;box-sizing:border-box;border-radius:16px;padding:0 11px;display:flex;gap:6px;align-items:center;white-space:nowrap;background:' + (s.modelMenu ? '#2A2C30' : '#131416') + ';border:1px solid ' + (s.modelMenu ? '#50545A' : '#34373B'),
+      editLenOpts: lenOpts.map((o) => ({ ...o, style: o.style.replace('height:28px;padding:0 11px', 'height:26px;padding:0 9px') })),
+      editCostShort: '~' + this.fmt(genCost),
+      fromTextStyle: 'font:inherit;font-size:13px;cursor:pointer;width:100%;height:36px;border-radius:18px;white-space:nowrap;' + (editChanged && !editConflict ? 'background:#F5A11D;border:0;color:#17160F;font-weight:700' : 'background:#212327;border:1px solid #34373B;color:#B5B2AA;cursor:default'),
+      startSugs, hasStartSugs: startSugs.length > 0, sugs, hasSugs: sugs.length > 0,
+      fromTextLabel: editConflict ? 'Fix the photo first — see below' : isNew ? (editChanged ? '◆ New video · ~' + this.fmt(genCost) + ' credits' : 'New video') : editChanged ? '◆ New version · ~' + this.fmt(genCost) + ' credits' : 'New version',
+      fromText: () => { if (!editChanged) { this.say(isNew ? 'Describe the new video first' : 'Change the words or the photo first'); return; } runCompose(); },
+      takeCost: '~' + this.fmt(takeCost), extCost: '~' + this.fmt(extCost),
+      fSlower: free('Slower · speed 75%', (d) => Math.round(d / 0.75)),
+      fTrim: free('Trimmed 1 s off the end', (d) => Math.max(2, d - 1), { trimmed: true }),
+      fVert: free('Vertical 9:16 · sides cropped', (d) => d, { vert: 'crop' }),
+      fZoom: free('Slow zoom in', (d) => d, { zoom: true }),
+      fFreeze: free('Last frame held 2 s', (d) => d + 2, { freeze: true }),
+      pTake: cv ? paid('Another take', takeCost, 2, 8, cv.text, cv.img) : () => {},
+      pExtend: cv ? paid('+4 s from the last frame', extCost, 0, cv.d + 4, cv.text, cv.img) : () => {},
+      pVert: cv ? paid('Vertical · new take', takeCost, 1, cv.d, cv.text, cv.img, { vert: 'gen' }) : () => {},
+      sendToEdit: () => { if (!gv) { this.say('Nothing finished yet — the edit gets the version once it renders'); return; } this.setState({ tab: 'edit', leftTab: 'media' }); },
+
+      importRec,
+      leftTabs: [['media', 'Media'], ['transcript', 'Transcript'], ['text', 'Text']].map(([k, l]) => ({ label: l, style: tab3(s.leftTab === k), pick: () => this.setState({ leftTab: k }) })),
+      rightTabs: [['inspector', 'Inspector'], ['captions', 'Captions'], ['clips', 'Clips']].map(([k, l]) => ({ label: l, style: tab3(s.rightTab === k), pick: () => this.setState({ rightTab: k }) })),
+      rCaps: s.rightTab === 'captions', capOff: !s.caps || !s.rec, toCapStyle: () => this.setState({ rightTab: 'captions' }),
+      capSummary: 'Captions ' + (s.burn ? 'on' : 'as .srt') + ' · ' + CAPS[s.capPreset].name + ' · ' + ['S', 'M', 'L'][s.capSize],
+      burnNote: s.burn ? 'Everyone sees them, on every platform.' : 'Off — exported as a separate .srt file instead.',
+      capCards: CAPS.map((c, k) => { const on = s.capPreset === k; return { label: c.name, on: on ? 'true' : 'false', sample: capSample, pick: () => this.setState({ capPreset: k }),
+        wrap: 'font:inherit;color:#ECEAE4;cursor:pointer;padding:5px;border-radius:9px;display:flex;flex-direction:column;gap:5px;text-align:left;background:#1A1B1E;border:' + (on ? '2px solid #F5A11D' : '2px solid transparent'),
+        frame: 'position:relative;display:block;width:100%;aspect-ratio:16/9;border-radius:6px;overflow:hidden;background:' + this.G('rec'),
+        textWrap: 'position:absolute;left:0;right:0;bottom:8px;text-align:center;padding:0 6px;line-height:1.5',
+        css: c.css(Math.round(11 * sizeMul)) + ';box-decoration-break:clone;-webkit-box-decoration-break:clone',
+        labelStyle: 'font-size:12px;' + (on ? 'color:#F5A11D;font-weight:700' : '') }; }),
+      capSizes: [['S', 0], ['M', 1], ['L', 2]].map(([l, k]) => ({ label: l, style: tab3(s.capSize === k), pick: () => this.setState({ capSize: k }) })),
+      capPositions: [['Top', 'top'], ['Middle', 'middle'], ['Bottom', 'bottom']].map(([l, k]) => ({ label: l, style: tab3(s.capPos === k), pick: () => this.setState({ capPos: k }) })),
+      lMedia: s.leftTab === 'media', lTranscript: s.leftTab === 'transcript', lCaptions: s.leftTab === 'captions', lText: s.leftTab === 'text',
+      mediaRows: sources.map((x) => ({ name: x.name, meta: x.kind === 'rec' ? '1920 × 1080 · 3:00 · with sound' : x.d + ' s · no sound', badge: x.kind === 'rec' ? 'Imported' : 'AI', badgeClass: x.kind === 'rec' ? 'imp' : 'ai', thumb: 'width:90px;height:50px;flex:none;border-radius:6px;background:' + this.G(x.kind === 'rec' ? 'rec' : x.g) })),
+      genPending: s.vers.length > 0 && !vids.some((vid) => goodFor(vid)),
+      trNone: !s.rec || s.tr === 'none', trRunning: s.rec && s.tr === 'running', trDone: s.rec && s.tr === 'done',
+      trEmptyTitle: s.rec ? 'Turn speech into text' : 'Nothing to transcribe',
+      trEmptyBody: s.rec ? 'BeeRoll writes down what is said in spotlight-demo.mov. Then you cut the video by deleting words, and captions come from the same text. On your Mac, free.' : 'Generated videos have no sound. Import a video where someone talks to cut it by its words.',
+      trActionLabel: s.rec ? 'Transcribe' : 'Import a video', trAction: s.rec ? startTr : importRec,
+      trPhase: s.trP < 25 ? 'Preparing' : 'Transcribing ' + s.trP + '%', trBar: 'height:4px;background:#F5A11D;border-radius:2px;width:' + s.trP + '%',
+      segs, hasSel: s.wsel.length > 0, selCount: s.wsel.length + (s.wsel.length === 1 ? ' word' : ' words'),
+      removeSel: () => this.setState({ struck: this.state.struck.concat(this.state.wsel), wsel: [] }), clearSel: () => this.setState({ wsel: [] }),
+      capNone: !s.caps || !s.rec, capOn: s.caps && s.rec, buildCaps: () => this.setState({ caps: true, rightTab: 'captions' }),
+      capEmptyBody: s.rec && s.tr === 'done' ? 'Captions are the transcript shown on the video. Turn them on, then pick how they look.' : 'Captions come from a transcript. Transcribe an imported video first.',
+      cues: segsRaw.map((g) => ({ tc: g.tc, text: cueText(g) })),
+            burnStyle: sw(s.burn), burnKnob: knob(s.burn), toggleBurn: () => this.setState({ burn: !this.state.burn }),
+      titleWords: s.titleWords, onTitleWords: (e) => this.setState({ titleWords: e.target.value }),
+      presets: [['Title', 'Large, centred'], ['Lower third', 'Name strip, bottom left'], ['Callout', 'Small, boxed']].map(([n, sum]) => ({ name: n, sum, add: () => { const w = (this.state.titleWords || '').trim(); if (!w) return; this.setState({ titles: this.state.titles.concat([{ words: w, start: playSec, d: 4 }]), titleWords: '' }); this.say('Text added at ' + this.mmss(playSec)); } })),
+      ticks, vidClips, titleClips, playheadX: 110 + pxs(playSec), playTC: this.tc(playSec), editTC: this.tc(editSec), editMMSS: this.mmss(editSec),
+      showBar: barCenter >= 0, barItems,
+      barStyle: 'position:absolute;z-index:5;display:flex;align-items:center;gap:2px;background:#2A2C30;border:1px solid #50545A;border-radius:10px;padding:4px;box-shadow:0 10px 28px rgba(0,0,0,.55);box-sizing:border-box;left:' + barLeft + 'px;top:' + (s.selTitle >= 0 ? 4 : 50) + 'px;width:' + barW + 'px',
+      cardMode, anchorBox: selCardObj && cardMode ? 'position:absolute;top:0;bottom:8px;pointer-events:none;box-sizing:border-box;border-left:2px solid #F5A11D;border-right:2px solid #F5A11D;background:rgba(245,161,29,.10);left:' + (110 + pxs((tlItems.find((c) => c.src && c.src.kind === 'rec') || { start: 0 }).start + selCardObj.a)) + 'px;width:' + Math.max(pxs(selCardObj.d), 4) + 'px' : 'display:none',
+      anchorA: selCardObj ? this.mmss(selCardObj.a) : '', anchorB: selCardObj ? this.mmss(selCardObj.b) : '',
+      frame: 'position:relative;overflow:hidden;border-radius:8px;' + (F.vert ? 'width:236px;height:420px;' : 'width:640px;height:360px;') + 'background:' + F.bg,
+      frameRec: F.rec, frameHasHook: !!F.hook, frameHook: F.hook, frameHasTitle: !!F.title, frameTitle: F.title,
+      frameHasCap: !!F.cap, frameCap: F.cap, frameCapStyle: F.capStyle + ';line-height:1.6;box-decoration-break:clone;-webkit-box-decoration-break:clone',
+      frameCapWrap: 'position:absolute;left:0;right:0;text-align:center;padding:0 12px;' + capPosCss(F.vert, false), frameLabel: F.label,
+
+      rInspNone: s.rightTab === 'inspector' && !selC, rInspClip: s.rightTab === 'inspector' && !!selC, rClips: s.rightTab === 'clips',
+      clipName: selC ? selC.name : '', clipBadge: selC ? (selC.src.kind === 'rec' ? 'Imported' : 'AI') : '', clipBadgeClass: selC && selC.src.kind === 'rec' ? 'imp' : 'ai',
+      clipAbout: selC ? (selC.src.kind === 'rec' ? 'Your video · with sound' : '“' + selC.src.text + '”') : '', clipIsGen: !!selC && selC.src.kind === 'gen',
+      clipStart: selC ? this.mmss(selC.start) : '', clipDur: selC ? selC.d + ' s' : '',
+      deselect: () => this.setState({ selClip: -1, selTitle: -1 }),
+      rpNoRec: !s.rec, rpNeedTr: s.rec && s.tr !== 'done', rpTranscribe: startTr,
+      rpReady: s.rec && s.tr === 'done' && s.rp === 'none', rpRunning: s.rec && s.rp === 'running', rpDone: s.rec && s.rp === 'done',
+      recLen: '3:00', rpCost: cl(rpCostN), rrCost: '~' + rrCostN, rpP: s.rpP, rpBar: 'height:4px;background:#F5A11D;border-radius:2px;width:' + s.rpP + '%',
+      rpGo: () => charge(rpCostN, () => this.setState({ rp: 'running', rpP: 0 })),
+      cards, keptN: kept.length, keptLine: kept.length ? kept.length + ' kept → 1080 × 1920, captions burned in' : 'Keep a Clip to export it.',
+      expKeptStyle: 'text-align:center;font-size:13px;padding:8px;' + (kept.length ? '' : 'opacity:.4;cursor:default'),
+      expKept: () => { if (!kept.length || typeof this.state.exp === 'number') return; this.setState({ exp: 0, expWhat: kept.length + (kept.length === 1 ? ' Clip' : ' Clips') }); },
+
+      pvBtnStyle: 'padding:5px 12px;' + (sources.length ? '' : 'opacity:.4;cursor:default'),
+      expBtnStyle: 'padding:5px 12px;' + (sources.length && typeof s.exp !== 'number' ? '' : 'opacity:.4;cursor:default'),
+      openPvEdit: () => { if (!sources.length) return; openPvFor(cardMode ? selCardObj.k : 'edit'); },
+      exportEdit: () => { if (!sources.length || typeof this.state.exp === 'number') return; this.setState({ exp: 0, expWhat: projName + ' · 1920 × 1080' }); this.say('Exporting ' + projName + '…'); },
+
+      hasToast: !!s.toast, toast: s.toast, toastStyle: 'font-size:12px;' + (s.toast.indexOf('✓') === 0 ? 'color:#7AA578' : 'color:#FFD475'), ackToast: () => this.setState({ toast: '', toastT: 0 }),
+      hasModal: !!s.modal, mCost: s.modal ? this.fmt(s.modal.cost) : '', mClose: () => this.setState({ modal: null }), mTopUp: () => this.setState({ credits: this.state.credits + 10000, modal: null }),
+
+      pvOn: !!pv, pvClose: () => this.setState({ pv: null }),
+      pvKey: (e) => { const p = this.state.pv; if (!p) return; if (e.key === 'Escape') { e.preventDefault(); this.setState({ pv: null }); } else if (e.key === ' ') { e.preventDefault(); this.setState({ pv: { ...p, playing: !p.playing, t: p.t >= p.len ? 0 : p.t } }); } },
+      pvWhat: pv ? (pvCard ? 'Clip ' + (pvCard.k + 1) : 'Whole edit') : '',
+      pvSources: pvSrcList.map((o) => ({ label: o.label, style: segPick(pv && pv.src === o.src), pick: () => openPvFor(o.src) })),
+      pvAspects: ['16:9', '9:16'].map((a) => ({ label: a, style: segPick(pv && pv.aspect === a), pick: () => this.setState({ pv: { ...this.state.pv, aspect: a, exp: null } }) })),
+      pvFrame: 'position:relative;overflow:hidden;border-radius:6px;max-height:100%;' + (pvVert ? 'height:640px;aspect-ratio:9/16;' : 'width:1180px;aspect-ratio:16/9;') + 'background:' + pvBg,
+      pvInner: 'position:absolute;inset:0;' + (pv && pv.playing ? 'animation:kb 9s ease-in-out infinite alternate;' : '') + 'background:radial-gradient(circle at 50% 58%,rgba(240,228,206,.22),transparent 38%)',
+      pvRec: !!pvCard || (!!pvFr && !!pvFr.it && pvFr.it.src.kind === 'rec'),
+      pvHasHook: !!pvCard && !!pv && pv.t < 4, pvHook: pvCard ? pvCard.hook : '',
+      pvHookWrap: 'position:absolute;left:0;right:0;text-align:center;padding:0 24px;top:9%',
+      pvHookStyle: 'font-weight:800;color:#fff;background:rgba(11,12,14,.72);border-radius:8px;line-height:1.6;box-decoration-break:clone;-webkit-box-decoration-break:clone;padding:4px 10px;font-size:26px',
+      pvHasTitle: !!pvFr && !!pvFr.title, pvTitle: pvFr ? pvFr.title : '',
+      pvHasCap: !!pvCap, pvCap,
+      pvCapWrap: 'position:absolute;left:0;right:0;text-align:center;padding:0 28px;' + (pvCard ? 'bottom:20%' : capPosCss(pvVert, true)),
+      pvCapStyle: (pvCard ? 'font-size:24px;font-weight:800;color:#fff;background:rgba(11,12,14,.78);padding:4px 10px;border-radius:6px' : capCss(32)) + ';line-height:1.6;box-decoration-break:clone;-webkit-box-decoration-break:clone',
+      pvNote: !pv ? '' : pvVert && !pvCard ? 'Vertical: the sides of the 16:9 picture are cropped' : pvCard ? 'Clip ' + (pvCard.k + 1) + ' · captions burned in' : 'As the viewer will see it',
+      pvPlayIcon: pv && pv.playing ? '❚❚' : '▶',
+      pvToggle: () => { const p = this.state.pv; this.setState({ pv: { ...p, playing: !p.playing, t: p.t >= p.len ? 0 : p.t } }); },
+      pvBack: () => { const p = this.state.pv; this.setState({ pv: { ...p, t: Math.max(0, p.t - 5) } }); },
+      pvFwd: () => { const p = this.state.pv; this.setState({ pv: { ...p, t: Math.min(p.len, p.t + 5) } }); },
+      pvScrub: (e) => { const el = e && e.target && e.target.closest ? e.target.closest('[data-scrub]') : null; if (!el) return; const r = el.getBoundingClientRect(); const f = Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)); const p = this.state.pv; this.setState({ pv: { ...p, t: f * p.len } }); },
+      pvFill: pv ? 'position:absolute;left:0;top:0;height:4px;background:#F5A11D;border-radius:2px;width:' + (pv.t / pv.len * 100) + '%' : '',
+      pvKnob: pv ? 'position:absolute;top:-5px;width:14px;height:14px;margin-left:-7px;border-radius:50%;background:#ECEAE4;left:' + (pv.t / pv.len * 100) + '%' : '',
+      pvTC: pv ? this.mmss(pv.t) + ' / ' + this.mmss(pv.len) : '',
+      pvCanExport: !!pv && pv.exp == null,
+      pvExpText: !pv || pv.exp == null ? pvDims : pv.exp === 'done' ? '✓ Exported · ' + pvDims : 'Exporting ' + pv.exp + '%',
+      pvExpStyle: 'font-size:12px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;' + (pv && pv.exp === 'done' ? 'color:#7AA578' : pv && typeof pv.exp === 'number' ? 'color:#FFD475' : 'color:#9A978F'),
+      pvExport: () => this.setState({ pv: { ...this.state.pv, exp: 0 } })
+    };
+  }
+}
+
+</script>
+<script>
+(function () {
+  var app = document.getElementById('app');
+  function fit() { var k = Math.min(window.innerWidth / 1460, window.innerHeight / 920); app.style.transform = 'scale(' + Math.min(k, 1.5) + ')'; }
+  window.addEventListener('resize', fit); fit();
+  var demo = /[?&]demo(=1|=true)?(&|$)/.test(location.search);
+  mountDC(Component, document.getElementById('tpl'), app, { demo: demo });
+})();
+</script>
+</body>
+</html>
